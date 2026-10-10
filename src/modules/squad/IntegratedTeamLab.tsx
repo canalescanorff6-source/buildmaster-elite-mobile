@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronRight,
+  ClipboardCopy,
   Crown,
   Download,
   Gamepad2,
@@ -19,6 +20,10 @@ import {
 } from 'lucide-react';
 import { buildTeamDiagnosis, type IntegratedPlayerRecord, type TeamDiagnosis } from '@/modules/core/centralIntelligence';
 import type { TacticalFormation, TacticalStyle } from '@/lib/analyzer';
+import { cardIdentityFingerprintR126 } from '@/lib/cardIdentityFingerprintR126';
+import { evaluateManagerLinksR560, type LinkStatusR560, type ManagerLinkEvaluationR560, type SquadMemberR560 } from '@/lib/managerLinkEngineR560';
+import type { ManagerRecord } from '@/lib/managers';
+import { buildTacticalSnapshotR562 } from '@/lib/tacticalSnapshotR562';
 import type { MatchValidationRecord } from '@/lib/appStartupContractsR200';
 import { FORMATION_BLUEPRINTS } from '@/lib/formationRoleEngine';
 import { SquadGapPanel } from '@/components/SquadGapPanel';
@@ -41,6 +46,8 @@ type Props = {
   players: IntegratedPlayerRecord[];
   records: MatchValidationRecord[];
   teamStyle: TacticalStyle;
+  /** Técnico selecionado no estado principal. Opcional para preservar chamadas antigas. */
+  selectedManager?: ManagerRecord | null;
   onOpenFormationLab: () => void;
   onPrepareMatch: () => void;
   onFormationChange: (formation: TacticalFormation) => void;
@@ -66,16 +73,164 @@ function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toLocaleUpperCase('pt-BR')).join('') || '?';
 }
 
-export function IntegratedTeamLab({ team, players, records, teamStyle, onOpenFormationLab, onPrepareMatch, onFormationChange }: Props) {
+
+/**
+ * R561: a escalação do diagnóstico é uma sugestão automática. Não sinalizar um
+ * vínculo como ATIVO antes da confirmação explícita dos 11 jogadores, posições
+ * escaladas e estilos. Nenhum atributo ou carta é modificado por esta UI.
+ */
+const R561_UNCONFIRMED_STYLES = new Set([
+  '', 'nao confirmado', 'nao identificado', 'nao informado', 'desconhecido',
+  'indefinido', 'pendente', 'sem estilo', 'n a', 'unknown', 'null', '-'
+]);
+
+function normalizedLabelR561(value: string | null | undefined) {
+  return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function isConfirmedStyleR561(value: string | null | undefined) {
+  return !R561_UNCONFIRMED_STYLES.has(normalizedLabelR561(value));
+}
+
+function squadFromDiagnosisR561(team: TeamDiagnosis): SquadMemberR560[] {
+  return team.lineup.map((fit) => ({
+    playerName: fit.player?.parsed.playerName?.trim() ?? '',
+    // O vínculo exige a posição no campo, e não a posição natural da carta.
+    position: fit.slot.position,
+    playstyle: fit.player?.parsed.offensivePlaystyle || fit.player?.parsed.playstyle || null
+  }));
+}
+
+function squadIsCompleteR561(squad: readonly SquadMemberR560[], team: TeamDiagnosis) {
+  return squad.length === 11 && team.totalSlots === 11 && team.filledSlots === 11 &&
+    squad.every((member) => Boolean(member.playerName.trim()) && isConfirmedStyleR561(member.playstyle));
+}
+
+function squadConfirmationKeyR561(team: TeamDiagnosis, managerId: string | null, squad: readonly SquadMemberR560[]) {
+  // A chave troca caso mude o técnico, formação, carta, posição ou estilo;
+  // assim a confirmação anterior perde validade sem efeitos ou timers.
+  return JSON.stringify({
+    managerId,
+    formation: team.formation,
+    squad: team.lineup.map((fit, index) => ({
+      slotId: fit.slot.id,
+      position: squad[index]?.position ?? fit.slot.position,
+      cardFingerprint: fit.player ? cardIdentityFingerprintR126(fit.player.parsed) : null,
+      playerName: squad[index]?.playerName ?? '',
+      playstyle: squad[index]?.playstyle ?? null
+    }))
+  });
+}
+
+const R561_LINK_PALETTE: Record<LinkStatusR560, { color: string; background: string; border: string }> = {
+  ATIVO: { color: '#6ee7b7', background: 'rgba(16,185,129,.09)', border: 'rgba(16,185,129,.42)' },
+  INATIVO: { color: '#fca5a5', background: 'rgba(239,68,68,.09)', border: 'rgba(239,68,68,.42)' },
+  PENDENTE: { color: '#fcd34d', background: 'rgba(245,158,11,.09)', border: 'rgba(245,158,11,.40)' }
+};
+
+function linkRequirementLabelR561(position: string, playstyle: string) {
+  const names: Record<string, string> = { DMF: 'VOL', AMF: 'MAT', CF: 'CA' };
+  return `${playstyle} • ${names[position] ?? position}`;
+}
+
+type ManagerLinksPanelPropsR561 = {
+  manager: ManagerRecord | null;
+  links: readonly ManagerLinkEvaluationR560[];
+  squadComplete: boolean;
+  lineupConfirmed: boolean;
+  onConfirmationChange: (confirmed: boolean) => void;
+  filled: number;
+};
+
+function ManagerLinksPanelR561({ manager, links, squadComplete, lineupConfirmed, onConfirmationChange, filled }: ManagerLinksPanelPropsR561) {
+  return (
+    <section className="luxury-panel bm-r561-manager-links" aria-label="Vínculos táticos do técnico" style={{ marginTop: 14, marginBottom: 14, padding: 16, minWidth: 0 }}>
+      <header style={{ display: 'flex', alignItems: 'center', gap: 11, flexWrap: 'wrap', marginBottom: 10 }}>
+        <Target size={21} aria-hidden="true" />
+        <div style={{ flex: '1 1 190px', minWidth: 0 }}>
+          <strong style={{ display: 'block' }}>Vínculos táticos do técnico</strong>
+          <small style={{ display: 'block', opacity: .82 }}>{manager?.name ?? 'Nenhum técnico específico selecionado'}</small>
+        </div>
+        {links.length > 0 && <small>{links.filter((link) => link.status === 'ATIVO').length}/{links.length} vínculos ativos</small>}
+      </header>
+
+      {!links.length ? (
+        <p style={{ margin: 0, opacity: .85 }}>
+          {manager ? 'Não há vínculos cadastrados para esta edição do técnico. Nenhum bônus de vínculo será presumido.' : 'Selecione um técnico em Opções do time para verificar os vínculos da sua escalação.'}
+        </p>
+      ) : (
+        <>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 12, cursor: squadComplete ? 'pointer' : 'not-allowed' }}>
+            <input
+              type="checkbox"
+              checked={lineupConfirmed}
+              disabled={!squadComplete}
+              onChange={(event) => onConfirmationChange(event.target.checked)}
+              aria-label="Confirmar escalação, posições e estilos dos onze titulares"
+              style={{ marginTop: 4, flexShrink: 0 }}
+            />
+            <span style={{ fontSize: 13, lineHeight: 1.5 }}>
+              Confirmo que os 11 titulares, suas posições no campo e seus estilos estão corretos no jogo.
+              {!squadComplete && <small style={{ display: 'block', opacity: .82 }}>PENDENTE: {filled}/11 posições preenchidas; confira também os nomes e estilos das cartas.</small>}
+            </span>
+          </label>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: 12 }}>
+            {links.map((link) => {
+              const palette = R561_LINK_PALETTE[link.status];
+              const explanation = link.status === 'ATIVO'
+                ? 'Requisitos atendidos na escalação confirmada. Vínculo habilitado; sem alterar os atributos da carta.'
+                : link.status === 'INATIVO'
+                  ? `Requisitos não atendidos: ${link.missing.length ? link.missing.join(' + ') : 'combinação de jogadores inválida'}.`
+                  : !squadComplete
+                    ? 'Dados insuficientes para validar os requisitos do vínculo.'
+                    : 'Escalação automática ainda não confirmada. Confira e marque a confirmação acima.';
+              return (
+                <article key={link.id} aria-label={`${link.name}: ${link.status}`} style={{ minWidth: 0, border: `1px solid ${palette.border}`, background: palette.background, borderRadius: 12, padding: 13 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+                    <strong style={{ minWidth: 0 }}>{link.name}</strong>
+                    <span role="status" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: palette.color, fontSize: 12, fontWeight: 800, letterSpacing: '.03em' }}>
+                      {link.status === 'ATIVO' ? <CheckCircle2 size={15} aria-hidden="true" /> : <AlertTriangle size={15} aria-hidden="true" />}
+                      {link.status}
+                    </span>
+                  </div>
+                  <div style={{ display: 'grid', gap: 3, fontSize: 12, opacity: .9, marginBottom: 8 }}>
+                    <span>Peça-chave: {linkRequirementLabelR561(link.centerpiece.position, link.centerpiece.playstyle)}{link.centerpiecePlayer ? ` — ${link.centerpiecePlayer}` : ''}</span>
+                    <span>Complemento: {linkRequirementLabelR561(link.keyman.position, link.keyman.playstyle)}{link.keymanPlayer ? ` — ${link.keymanPlayer}` : ''}</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: 12, lineHeight: 1.5 }}>{explanation}</p>
+                </article>
+              );
+            })}
+          </div>
+          <small style={{ display: 'block', marginTop: 10, opacity: .76 }}>
+            ATIVO indica requisitos táticos confirmados no BuildMaster. A ativação efetiva no jogo não é verificada pelo aplicativo; bônus numéricos não são somados nesta tela.
+          </small>
+        </>
+      )}
+    </section>
+  );
+}
+
+export function IntegratedTeamLab({ team, players, records, teamStyle, selectedManager = null, onOpenFormationLab, onPrepareMatch, onFormationChange }: Props) {
   const [tab, setTab] = useState<TeamTab>('escalacao');
   const [gameMode, setGameMode] = useState(false);
   const [savedNotice, setSavedNotice] = useState('');
+  const [clipboardFallbackR562, setClipboardFallbackR562] = useState<string | null>(null);
+  const [copyingSnapshotR562, setCopyingSnapshotR562] = useState(false);
   const [comparisonFormation, setComparisonFormation] = useState<TacticalFormation>('4-3-3');
+  const [confirmedLineupKeyR561, setConfirmedLineupKeyR561] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const detailRef = useRef<HTMLDivElement | null>(null);
   const comparisonTeam = useMemo(() => buildTeamDiagnosis(players, comparisonFormation, teamStyle), [players, comparisonFormation, teamStyle]);
   const formationOptions = useMemo(() => FORMATION_BLUEPRINTS.map((item) => item.id as TacticalFormation), []);
   const playerByName = useMemo(() => new Map(players.map((player) => [player.name, player])), [players]);
+  const squadR561 = useMemo(() => squadFromDiagnosisR561(team), [team]);
+  const squadCompleteR561 = useMemo(() => squadIsCompleteR561(squadR561, team), [squadR561, team]);
+  const confirmationKeyR561 = useMemo(() => squadConfirmationKeyR561(team, selectedManager?.id ?? null, squadR561), [team, selectedManager?.id, squadR561]);
+  const lineupConfirmedR561 = squadCompleteR561 && confirmedLineupKeyR561 === confirmationKeyR561;
+  const managerLinksR561 = useMemo(() => evaluateManagerLinksR560(selectedManager, squadR561, { lineupConfirmed: lineupConfirmedR561 }), [selectedManager, squadR561, lineupConfirmedR561]);
   const starterIds = useMemo(() => new Set(team.lineup.map((item) => item.player?.parsed.playerName).filter(Boolean)), [team.lineup]);
   const reservePlayers = useMemo(() => players.filter((player) => !starterIds.has(player.name)).slice(0, 5), [players, starterIds]);
   const tacticalTwinR480 = useMemo(() => buildTacticalTwinR480({ team, players, records, teamStyle }), [team, players, records, teamStyle]);
@@ -127,6 +282,29 @@ export function IntegratedTeamLab({ team, players, records, teamStyle, onOpenFor
     setSavedNotice('Time exportado sem alterar a escalação atual.');
   }
 
+  async function copyTacticalSnapshotR562() {
+    if (copyingSnapshotR562) return;
+    const snapshot = buildTacticalSnapshotR562({
+      team, teamStyle, selectedManager, squad: squadR561,
+      lineupConfirmed: lineupConfirmedR561, players
+    });
+    setCopyingSnapshotR562(true);
+    try {
+      if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API indisponível neste navegador.');
+      }
+      await navigator.clipboard.writeText(snapshot);
+      setClipboardFallbackR562(null);
+      setSavedNotice('Snapshot tático copiado. Cole o texto no ChatGPT, sem API paga.');
+    } catch {
+      // Alguns WebViews recusam writeText. Nunca afirmar sucesso nesses casos.
+      setClipboardFallbackR562(snapshot);
+      setSavedNotice('');
+    } finally {
+      setCopyingSnapshotR562(false);
+    }
+  }
+
   async function importTeam(file: File | undefined) {
     if (!file) return;
     try {
@@ -153,6 +331,15 @@ export function IntegratedTeamLab({ team, players, records, teamStyle, onOpenFor
         <article><span>FORMAÇÃO</span><strong>{team.formation}</strong><small>{team.strongestLine} em destaque</small></article>
         <article><span>FORÇA COLETIVA</span><strong>{team.globalScore}</strong><small>{team.globalScore >= 80 ? 'Excelente' : team.globalScore >= 65 ? 'Competitiva' : 'Em construção'}</small></article>
       </section>
+
+      <ManagerLinksPanelR561
+        manager={selectedManager}
+        links={managerLinksR561}
+        squadComplete={squadCompleteR561}
+        lineupConfirmed={lineupConfirmedR561}
+        onConfirmationChange={(confirmed) => setConfirmedLineupKeyR561(confirmed ? confirmationKeyR561 : null)}
+        filled={team.filledSlots}
+      />
 
       <TacticalDirectorPanelR500 plan={tacticalDirectorR500} compact />
 
@@ -199,12 +386,23 @@ export function IntegratedTeamLab({ team, players, records, teamStyle, onOpenFor
         <button type="button" role="tab" aria-selected={tab === 'tatica'} className={tab === 'tatica' ? 'active' : ''} onClick={() => selectTab('tatica')}>Tática</button>
         <button type="button" role="tab" aria-selected={tab === 'banco'} className={tab === 'banco' ? 'active' : ''} onClick={() => selectTab('banco')}>Banco</button>
         <button type="button" onClick={saveTeamPreset}><Save size={16}/> Salvar</button>
+        <button type="button" disabled={copyingSnapshotR562} onClick={() => void copyTacticalSnapshotR562()} aria-label="Copiar Snapshot Tático para o ChatGPT"><ClipboardCopy size={16}/>{copyingSnapshotR562 ? 'Copiando...' : 'Copiar Snapshot'}</button>
         <button type="button" onClick={exportTeam}><Download size={16}/> Exportar</button>
         <button type="button" onClick={() => importInputRef.current?.click()}><UploadCloud size={16}/> Importar</button>
         <button type="button" aria-pressed={gameMode} onClick={() => setGameMode((value) => !value)}><Gamepad2 size={16}/>{gameMode ? 'Modo normal' : 'Modo jogo'}</button>
         <input ref={importInputRef} className="sr-only" type="file" accept="application/json,.json" onChange={(event) => void importTeam(event.target.files?.[0])}/>
       </nav>
       {savedNotice && <div className="refined-inline-success" role="status"><CheckCircle2 size={16}/>{savedNotice}</div>}
+      {clipboardFallbackR562 !== null && (
+        <section className="luxury-panel" role="alert" aria-label="Cópia manual do Snapshot Tático" style={{ padding: 14, marginBlock: 12, minWidth: 0 }}>
+          <strong><AlertTriangle size={16} aria-hidden="true" /> Snapshot tático — cópia manual necessária</strong>
+          <p style={{ fontSize: 13 }}>Seu navegador não autorizou a cópia automática. Toque no campo, selecione todo o texto e copie para o ChatGPT.</p>
+          <textarea aria-label="Snapshot tático em texto para copiar" readOnly value={clipboardFallbackR562}
+            onFocus={(event) => event.currentTarget.select()}
+            style={{ display: 'block', width: '100%', minHeight: 170, resize: 'vertical', boxSizing: 'border-box' }} />
+          <button type="button" onClick={() => setClipboardFallbackR562(null)}>Fechar texto</button>
+        </section>
+      )}
 
       <div ref={detailRef} className="bm34-tab-panel" role="tabpanel" aria-live="polite">
       {tab === 'escalacao' && <section className="bm32-team-detail-grid">

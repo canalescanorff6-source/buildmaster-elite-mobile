@@ -1,5 +1,13 @@
-import type { TacticalStyle } from './analyzerDomain';
+import type { AttributeKey, PositionCode, TacticalStyle } from './analyzerDomain';
 
+export type ManagerLinkParticipantR560 = { playstyle: string; position: PositionCode };
+export type ManagerLinkRuleR560 = {
+  id: string;
+  name: string;
+  centerpiece: ManagerLinkParticipantR560;
+  keyman: ManagerLinkParticipantR560;
+  source: string;
+};
 export type ManagerTier = 'LENDARIO_EPICO' | 'PACOTE_SELECAO' | 'GP';
 export type ManagerRecord = {
   id: string;
@@ -11,12 +19,25 @@ export type ManagerRecord = {
   secondaryStyle?: TacticalStyle;
   secondaryProficiency?: number;
   booster: 'duplo' | 'especial' | 'padrao';
-  sourceStatus: 'informado_usuario';
+  sourceStatus: 'informado_usuario' | 'catalogo_comunitario_verificado';
+  /** Bônus fixos verificados para essa edição específica do técnico. */
+  attributeBoostsR560?: Partial<Record<AttributeKey, number>>;
+  linkUpsR560?: ManagerLinkRuleR560[];
 };
 
 export const MANAGERS: ManagerRecord[] = [
   { id:'capello-lbc-89', name:'Fabio Capello', version:'Lendário/Épico', tier:'LENDARIO_EPICO', primaryStyle:'CONTRA_ATAQUE', primaryProficiency:89, booster:'duplo', sourceStatus:'informado_usuario' },
   { id:'cruyff-posse-89', name:'Johan Cruyff', version:'Lendário/Épico', tier:'LENDARIO_EPICO', primaryStyle:'POSSE_DE_BOLA', primaryProficiency:89, booster:'duplo', sourceStatus:'informado_usuario' },
+  {
+    id:'r-rodriguez-posse-88-2026-10-01', name:'R. Rodríguez', version:'Pacote 01/10/2026',
+    tier:'PACOTE_SELECAO', primaryStyle:'POSSE_DE_BOLA', primaryProficiency:88,
+    booster:'duplo', sourceStatus:'catalogo_comunitario_verificado',
+    attributeBoostsR560:{ tightPossession:1, balance:1 },
+    linkUpsR560:[
+      {id:'over-the-top-pass-a',name:'Passe por cima A',centerpiece:{playstyle:'Orquestrador',position:'DMF'},keyman:{playstyle:'Artilheiro',position:'CF'},source:'eFHUB / eFootball.cz, 01/10/2026'},
+      {id:'breakthrough-pass-a',name:'Passe de ruptura A',centerpiece:{playstyle:'Armador criativo',position:'AMF'},keyman:{playstyle:'Artilheiro',position:'CF'},source:'eFHUB / eFootball.cz, 01/10/2026'}
+    ]
+  },
   { id:'beckenbauer-lbc-88', name:'Franz Beckenbauer', version:'Lendário/Épico', tier:'LENDARIO_EPICO', primaryStyle:'CONTRA_ATAQUE', primaryProficiency:88, booster:'duplo', sourceStatus:'informado_usuario' },
   { id:'rijkaard-qc-88', name:'Frank Rijkaard', version:'Lendário/Épico', tier:'LENDARIO_EPICO', primaryStyle:'CONTRA_ATAQUE_RAPIDO', primaryProficiency:88, booster:'duplo', sourceStatus:'informado_usuario' },
   { id:'chivu-qc-88', name:'Cristian Chivu', version:'Lendário/Épico', tier:'LENDARIO_EPICO', primaryStyle:'CONTRA_ATAQUE_RAPIDO', primaryProficiency:88, booster:'duplo', sourceStatus:'informado_usuario' },

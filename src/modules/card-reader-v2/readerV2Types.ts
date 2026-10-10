@@ -21,6 +21,7 @@ export type ReaderV2FieldKey =
   | 'playstyle'
   | 'attributes'
   | 'skills'
+  | 'additionalSkills'
   | 'impeto'
   | string;
 
@@ -72,6 +73,7 @@ export interface ReaderV2ReviewDraft {
   attributeValues?: number[];
   attributeRows?: Array<number | null>;
   skillValues?: string[];
+  optionalCaptureR563?: import('./readerV2OptionalCaptureR563').ReaderV2OptionalCaptureR563;
   impetoName?: string;
   impetoNames?: string[];
   specialSkillValues?: string[];

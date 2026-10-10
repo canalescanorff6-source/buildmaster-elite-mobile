@@ -11,6 +11,7 @@ import type {
 } from './readerV2Types';
 import { READER_V2_DEFAULT_ZONES, resolveReaderV2FrameZones } from './readerV2ZoneProfile';
 import { recoverReaderV2Identity } from './readerV2IdentityRecovery';
+import { safeReaderV2NumericTokensR563, normalizeReaderV2OptionalTextR563 } from './readerV2OptionalCaptureR563';
 
 export type ReadReaderV2ZonesInput = {
   imageSession: Pick<ReaderV2ImageSession, 'withCrop'> & Partial<Pick<ReaderV2ImageSession,'frame'>>;
@@ -35,17 +36,16 @@ const READER_V2_ATTRIBUTE_VALUE_STRIPS: AttributeValueStrip[] = [
 const errorMessage = (cause: unknown) => cause instanceof Error ? cause.message : String(cause);
 
 function parseAttributeValues(text: string) {
-  const numericTokens = text.match(/\b\d{1,3}\b/g) ?? [];
-  return numericTokens
-    .map((token) => Number(token))
-    .filter((value) => Number.isFinite(value) && value >= 1 && value <= 110);
+  // R563: a corrupted badge (e.g. 9O, 8?, 8%) cannot be silently turned
+  // into a smaller integer that contaminates the 10+9+7 ordered slots.
+  return safeReaderV2NumericTokensR563(text);
 }
 
 function namedAttributeValues(text:string){
   const values:Record<string,number>={};
   const conflicts=new Set<string>();
   for(const line of text.split(/\r?\n/)){
-    if(/\b\d{4,}\b/.test(line))continue;
+    if(/\b\d{4,}\b/.test(line) || /\d[?*!@#$%~OoIl|]|[OoIl|]\d/.test(line))continue;
     for(const [key,value] of Object.entries(parseAttributes(line))){
       if(typeof value!=='number')continue;
       if(values[key]!==undefined&&values[key]!==value)conflicts.add(key);
@@ -104,6 +104,7 @@ function minimumConfidence(key: ReaderV2FieldKey) {
     case 'playstyle': return 35;
     case 'attributes': return 42;
     case 'skills':
+    case 'additionalSkills':
     case 'impeto': return 28;
     default: return 20;
   }
@@ -135,6 +136,10 @@ function isSemanticallyPlausible(field: ReaderV2FieldEvidence) {
     case 'mainPosition':
       return countLetters(value) >= 2 && !/\d/.test(value);
     case 'playstyle':
+      return countLetters(value) >= 3;
+    case 'skills':
+    case 'additionalSkills':
+    case 'impeto':
       return countLetters(value) >= 3;
     default:
       return true;
@@ -403,6 +408,11 @@ export async function readReaderV2Zones(input: ReadReaderV2ZonesInput): Promise<
       }
     }
 
+    if (zone.key === 'additionalSkills' || zone.key === 'impeto') {
+      // Remove invisible OCR artifacts without rewriting ownership or inventing skills.
+      // The raw pixels / raw text remain available for manual review.
+      field = {...field, value: normalizeReaderV2OptionalTextR563(field.value)};
+    }
     fields.push(field);
     input.onProgress?.({
       stage: 'reading',
@@ -421,6 +431,13 @@ export async function readReaderV2Zones(input: ReadReaderV2ZonesInput): Promise<
   });
   input.onProgress?.({stage:'reading',current:total,total,percent:100,label:'Leitura dos campos concluída'});
   validateLevelPointsConsistency(fields, uncertainKeys);
+  // Optional sections stay PENDENTE unless a human confirms each observed slot.
+  // An absent section on a legacy card must never invalidate a previously valid card.
+  if (fields.some(field => field.key === 'additionalSkills') ||
+      fields.some(field => field.key === 'skills' && /(?:habilidades?\s+adicionais?|additional\s+skills?)/i.test(field.value))) {
+    addUncertain(uncertainKeys, 'additionalSkills');
+  }
+
 
   const attributes = fields.find((field) => field.key === 'attributes');
   const parsedAttributeValues = attributes ? parseAttributeValues(attributes.value) : [];

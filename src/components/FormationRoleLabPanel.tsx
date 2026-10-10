@@ -26,6 +26,7 @@ import {
 import type { AnalysisResult, PositionCode, TacticalStyle } from '@/lib/analyzer';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { createStableId } from '@/lib/stableId';
+import { evaluateManagerLinksR560, formatSquadForChatR560, type SquadMemberR560 } from '@/lib/managerLinkEngineR560';
 import { TacticalPosterStudioPanel } from '@/components/TacticalPosterStudioPanel';
 import {
   FORMATION_BLUEPRINTS,
@@ -133,6 +134,7 @@ export function FormationRoleLabPanel({ results, activeFormation, activeStyle }:
   const [managerDraft, setManagerDraft] = useState<ManagerDraft>({ name:'', primaryStyle:'POSSE_DE_BOLA', primaryProficiency:88, useSecondary:false, secondaryStyle:'CONTRA_ATAQUE_RAPIDO', secondaryProficiency:88 });
   const [editing, setEditing] = useState<SavedCustomFormation | null>(null);
   const [message, setMessage] = useState('');
+  const [lineupConfirmedR560, setLineupConfirmedR560] = useState(false);
   const tabPanelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => { setCustomFormations(readCustomFormations()); setCustomManagers(readCustomManagers()); }, []);
@@ -148,6 +150,17 @@ export function FormationRoleLabPanel({ results, activeFormation, activeStyle }:
   const managerRanking = useMemo(() => rankManagersForPlan(managerPool, selected, style), [managerPool, selected, style]);
   const selectedManagerFit = useMemo(() => managerRanking.find((item) => item.manager.id === managerId) ?? managerRanking[0] ?? null, [managerId, managerRanking]);
   const selectedManager = selectedManagerFit?.manager ?? null;
+  const squadR560 = useMemo<SquadMemberR560[]>(() => lineup.map((pick) => ({
+    playerName: pick.player?.parsed.playerName || '',
+    position: pick.slot.position,
+    playstyle: pick.player?.parsed.offensivePlaystyle || pick.player?.parsed.playstyle || null,
+    additionalSkills: pick.player?.parsed.additionalSkills || [],
+    boosters: pick.player?.parsed.impetos.map((item)=>item.name) || []
+  })), [lineup]);
+  const linkEvaluationsR560 = useMemo(() => evaluateManagerLinksR560(selectedManager, squadR560, {
+    lineupConfirmed:lineupConfirmedR560 && squadR560.length === 11 && squadR560.every((member)=>Boolean(member.playerName))
+  }), [selectedManager, squadR560, lineupConfirmedR560]);
+  useEffect(() => { setLineupConfirmedR560(false); }, [lineup, selectedManager?.id]);
   const filled = lineup.filter((item) => item.player).length;
   const averageFit = filled ? Math.round(lineup.reduce((sum,item) => sum + (item.player ? item.score : 0),0) / filled) : 0;
   const planScore = Math.round((advice.fit * .35) + ((selectedManagerFit?.score ?? 0) * .35) + (averageFit * .3));
@@ -172,6 +185,24 @@ export function FormationRoleLabPanel({ results, activeFormation, activeStyle }:
     if (!manager) return;
     writeAccountStorage(PLAN_STORAGE_KEY, JSON.stringify({ formationId:selected.id, style, managerId:manager.id, updatedAt:new Date().toISOString() } satisfies SavedPlan));
     setMessage(`Plano salvo: ${selected.name}, ${styleLabel(style)} e ${manager.name}.`);
+  }
+
+  async function copySquadR560() {
+    const text = formatSquadForChatR560(squadR560, selectedManager?.id ?? null, style, selected.name, {manager:selectedManager, lineupConfirmed:lineupConfirmedR560});
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard API não disponível.');
+      await navigator.clipboard.writeText(text);
+      setMessage('Elenco copiado para colar no ChatGPT, sem API paga.');
+    } catch {
+      // WebViews podem bloquear a área de transferência: permitir exportação .txt.
+      const payload = new Blob([text], {type:'text/plain;charset=utf-8'});
+      const url = URL.createObjectURL(payload);
+      const link = document.createElement('a');
+      link.href = url; link.download = 'buildmaster-elenco-chatgpt.txt';
+      document.body.appendChild(link); link.click(); link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setMessage('Não foi possível copiar. Foi solicitado o download de um arquivo de texto.');
+    }
   }
 
   function saveCustomManager() {
@@ -289,6 +320,13 @@ export function FormationRoleLabPanel({ results, activeFormation, activeStyle }:
                 <span><b>Tipo</b>{selectedManagerFit.dualProficiency ? 'Técnico híbrido' : 'Especialista'}</span>
                 <span><b>Booster</b>{selectedManagerFit.manager.booster}</span>
               </div>
+              {selectedManager?.attributeBoostsR560 && <p><b>Bônus verificados:</b> {Object.entries(selectedManager.attributeBoostsR560).map(([key,value])=>`${key === 'tightPossession' ? 'Condução firme' : key === 'balance' ? 'Equilíbrio' : key} +${value}`).join(' • ')}. Não reaplicar sobre print que já contém bônus.</p>}
+              {linkEvaluationsR560.length > 0 && <div className="formation-manager-linkups-r560">
+                <p><b>Vínculos do técnico</b> — avaliação do plano sugerido; só marque a escalação como confirmada quando corresponder ao jogo.</p>
+                {linkEvaluationsR560.map((link)=><p key={link.id}><b>{link.name} — {link.status}</b>: {link.centerpiece.playstyle} ({link.centerpiece.position}) + {link.keyman.playstyle} ({link.keyman.position}). {link.missing.length ? `Faltando no plano: ${link.missing.join('; ')}` : 'Requisitos encontrados no plano.'}</p>)}
+                <label><input type="checkbox" checked={lineupConfirmedR560} disabled={squadR560.length !== 11 || squadR560.some((member)=>!member.playerName)} onChange={(event)=>setLineupConfirmedR560(event.target.checked)}/> Confirmo que estes 11 jogadores, estilos e posições são exatamente os escalados no jogo</label>
+                {squadR560.length !== 11 || squadR560.some((member)=>!member.playerName) ? <small>Complete os 11 espaços para confirmar os vínculos.</small> : null}
+              </div>}
               {selectedManagerFit.reasons.map((reason)=><small key={reason}>✓ {reason}</small>)}
               {selectedManagerFit.warnings.map((warning)=><small key={warning} className="warn">⚠ {warning}</small>)}
             </>}
@@ -385,6 +423,7 @@ export function FormationRoleLabPanel({ results, activeFormation, activeStyle }:
           <article className="formation-lab-summary luxury-panel">
             <div className="section-title-row"><div><p className="kicker"><BrainCircuit size={14}/> Bloco Montagem Inteligente</p><h3>Melhor encaixe do seu Cofre</h3></div><span>{averageFit}/100</span></div>
             <p>O app evita dois zagueiros Destruidores, limita laterais muito ofensivos e distribui os jogadores sem repetir a mesma carta.</p>
+            <button type="button" onClick={() => void copySquadR560()}><Copy size={16}/> Copiar elenco para ChatGPT (sem API)</button>
           </article>
           <div className="formation-smart-lineup">
             {lineup.map((pick) => {
