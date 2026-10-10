@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import type { IntegratedPlayerRecord } from '@/modules/core/centralIntelligence';
 import { GameplayScoutingPanelR455 } from './GameplayScoutingPanelR455';
+import { buildCardSlotsViewR561 } from '@/lib/cardVisualEvidenceR561';
 
 type CategoryFilter = 'todos' | 'atacantes' | 'meias' | 'defesa' | 'goleiros';
 type StatusFilter = 'todos' | 'completo' | 'revisar' | 'favoritos';
@@ -158,6 +159,18 @@ export function PlayerLaboratory(props: Props) {
             </button>
             <button type="button" className="bm32-player-more" aria-label={`Organizar ${player.name}`} onClick={() => props.onOpenPlayer(player.id)}><MoreVertical size={21}/></button>
             <GameplayScoutingPanelR455 player={player}/>
+            <details className="luxury-panel" style={{ margin: '6px 10px 10px', padding: '8px 12px' }}>
+              <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Habilidades adicionais e Ímpetos — evidências R561</summary>
+              <div className="v27-pairing-list">
+                {buildCardSlotsViewR561(player.result.parsed).skills.map((slot) => (
+                  <span key={slot.label}>{slot.label}: {slot.value ?? '—'} [{slot.status}]</span>
+                ))}
+                {buildCardSlotsViewR561(player.result.parsed).boosters.map((slot) => (
+                  <span key={slot.label}>{slot.label}: {slot.value ?? '—'} [{slot.status}]</span>
+                ))}
+              </div>
+              <small>REGISTRADO não significa CONFIRMADO. Valores pendentes não são inventados nem salvos automaticamente.</small>
+            </details>
           </article>
         ))}
 
