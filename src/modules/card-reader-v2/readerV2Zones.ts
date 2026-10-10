@@ -11,7 +11,7 @@ import type {
 } from './readerV2Types';
 import { READER_V2_DEFAULT_ZONES, resolveReaderV2FrameZones } from './readerV2ZoneProfile';
 import { recoverReaderV2Identity } from './readerV2IdentityRecovery';
-import { safeReaderV2NumericTokensR563, normalizeReaderV2OptionalTextR563, inspectReaderV2OptionalFieldsR563 } from './readerV2OptionalCaptureR563';
+import { safeReaderV2NumericTokensR563, normalizeReaderV2OptionalTextR563 } from './readerV2OptionalCaptureR563';
 
 export type ReadReaderV2ZonesInput = {
   imageSession: Pick<ReaderV2ImageSession, 'withCrop'> & Partial<Pick<ReaderV2ImageSession,'frame'>>;
@@ -431,7 +431,6 @@ export async function readReaderV2Zones(input: ReadReaderV2ZonesInput): Promise<
   });
   input.onProgress?.({stage:'reading',current:total,total,percent:100,label:'Leitura dos campos concluída'});
   validateLevelPointsConsistency(fields, uncertainKeys);
-  const optional = inspectReaderV2OptionalFieldsR563(fields);
   // Optional sections stay PENDENTE unless a human confirms each observed slot.
   // An absent section on a legacy card must never invalidate a previously valid card.
   if (fields.some(field => field.key === 'additionalSkills') ||
