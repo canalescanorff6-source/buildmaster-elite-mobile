@@ -1,4 +1,4 @@
-import type { AttributeKey, ParsedCard, TrainingKey, TrainingPlan } from './analyzerDomain';
+import type { AttributeKey, ParsedCard, TrainingPlan } from './analyzerDomain';
 import { TRAINING_KEYS, trainingPlanTotalCost } from './trainingPlanCore';
 
 /**
