@@ -3,6 +3,7 @@
 import type { AnalysisResult } from '@/lib/analyzer';
 import type { ManagerRecord } from '@/lib/managers';
 import { SkillBoosterPlanningPanelR567 } from '@/components/result/SkillBoosterPlanningPanelR567';
+import { cardIdentityFingerprintR126 } from '@/lib/cardIdentityFingerprintR126';
 import { buildCardSlotsViewR561, buildManagerAttributeViewR561 } from '@/lib/cardVisualEvidenceR561';
 
 /** R561: evidence-only panel. Never writes OCR, progression or vault data. */
@@ -32,7 +33,13 @@ export function ResultEvidencePanelR561({ result, selectedManager }: {
         </div>
       )}
       <small>Uma base sem bônus deve ser comprovada independentemente. O print e o Cofre permanecem intactos.</small>
-      <SkillBoosterPlanningPanelR567 result={result} />
+      <SkillBoosterPlanningPanelR567
+        key={cardIdentityFingerprintR126(result.parsed) + ':' +
+          JSON.stringify(result.parsed.additionalSkillSlotsR560 ?? []) + ':' +
+          JSON.stringify(result.parsed.boosterSlotsR560 ?? {}) + ':' +
+          JSON.stringify(result.parsed.additionalSkills ?? []) + ':' +
+          JSON.stringify(result.parsed.impetos ?? [])}
+        result={result} />
     </details>
   );
 }
