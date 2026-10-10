@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { TacticalFormation, TacticalStyle } from '@/lib/analyzerDomain';
+import type { ManualTeamLayoutR573 } from '@/lib/manualTeamEditorR573';
 import { CARD_REGISTRY_STORAGE_KEY, MATCH_VALIDATION_STORAGE_KEY, ONBOARDING_STORAGE_KEY } from '@/lib/appStartupContractsR200';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { cancelIdleTask, scheduleIdleTask } from '@/lib/performanceScheduler';
@@ -30,6 +31,7 @@ export type CardVisionCentralWorkspaceInputR175 = {
   renderHistory: SavedAnalysis[];
   formation: TacticalFormation;
   teamStyle: TacticalStyle;
+  manualLayout?: ManualTeamLayoutR573 | null;
   performanceMode: 'economy' | 'balanced';
   startupGateReady: boolean;
   startupSafeMode: boolean;
@@ -46,6 +48,7 @@ export function useCardVisionCentralWorkspaceR175(input: CardVisionCentralWorksp
     renderHistory,
     formation,
     teamStyle,
+    manualLayout,
     performanceMode,
     startupGateReady,
     startupSafeMode,
@@ -93,8 +96,8 @@ export function useCardVisionCentralWorkspaceR175(input: CardVisionCentralWorksp
   ), [renderHistory, centralMatchRecords]);
 
   const integratedTeam = useMemo(
-    () => safeTeamDiagnosisR130(integratedPlayers, formation, teamStyle),
-    [integratedPlayers, formation, teamStyle],
+    () => safeTeamDiagnosisR130(integratedPlayers, formation, teamStyle, manualLayout),
+    [integratedPlayers, formation, teamStyle, manualLayout],
   );
 
   const centralDashboard = useMemo(
