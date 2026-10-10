@@ -45,7 +45,8 @@ function clamp(value: number, min = 0, max = 1) {
 function normalizeLegacyKey(key: string | undefined): ReaderV2FieldKey {
   const normalized = String(key ?? '').trim();
   if (normalized === 'name') return 'playerName';
-  if (normalized === 'impetos') return 'impeto';
+  if (normalized === 'impetos' || normalized === 'boosters') return 'impeto';
+  if (/^(?:additionalSkills|additionalSkill|extraSkills|habilidadesAdicionais)$/i.test(normalized)) return 'additionalSkills';
   return normalized || 'unknown';
 }
 
