@@ -33,7 +33,10 @@ export type R567Input = {
   /** Counts are user's own confirmed inventory values; null means unknown. */
   skillTokens: number | null;
   boosterTokens: number | null;
+  /** Verified tokens required for one selected craft, not assumed from icon count. */
+  boosterCostTokens: number | null;
   inventoryConfirmed: boolean;
+  costConfirmed: boolean;
 };
 
 function skillKey(value: string): string {
@@ -56,6 +59,7 @@ export function planSkillBoosterIntelligenceR567(input:R567Input):R567Plan {
   const alerts:string[]=[];
   const skillTokensConfirmed=tokens(input.skillTokens,input.inventoryConfirmed);
   const boosterTokensConfirmed=tokens(input.boosterTokens,input.inventoryConfirmed);
+  const boosterCostConfirmed=tokens(input.boosterCostTokens,input.costConfirmed);
   if (skillTokensConfirmed===null || boosterTokensConfirmed===null)
     alerts.push('Quantidade de tokens não confirmada. Nenhum gasto pode ser autorizado.');
   const slots=card.additionalSkillSlotsR560??[];
@@ -108,7 +112,7 @@ export function planSkillBoosterIntelligenceR567(input:R567Input):R567Plan {
     && boosterSlots.secondaryStatus==='DISPONIVEL'
     && !boosterSlots.secondary
     && !!boosterSlots.primary?.name
-    && occupiedBoosterNames.length===1;
+    && ownedBoosters.size===1;
   if(!craftingFree)alerts.push('Vaga de Booster Crafting não comprovadamente livre; sem sugestão de gasto.');
   const seenBoosters=new Set<string>();
   let usedBoosters=0;
@@ -124,7 +128,7 @@ export function planSkillBoosterIntelligenceR567(input:R567Input):R567Plan {
     else if(suggestion.tier==='evitar'){decision='EVITAR';reason='Candidato desaconselhado pelo motor de análise.';}
     else if(!isRecognizableImpetoName(label)){decision='NAO_RECONHECIDO';reason='Ímpeto não identificado no catálogo; conferir no jogo.';}
     else if(!craftingFree || usedBoosters>0){decision='SEM_VAGA';reason='Vaga de crafting não comprovada ou já reservada por outra proposta.';}
-    else if(boosterTokensConfirmed===null || boosterTokensConfirmed===0){reason='Confirmar tokens e custo da seleção antes de gastar.';}
+    else if(boosterTokensConfirmed===null || boosterCostConfirmed===null || boosterCostConfirmed===0 || boosterTokensConfirmed < boosterCostConfirmed){reason='Confirmar tokens disponíveis e custo real da seleção; recursos insuficientes ou sem prova.';}
     else {
       decision='RECOMENDAR';slot='CRAFTING';usedBoosters++;
       reason='Proposta de ímpeto para vaga confirmada; custo exato e efeito devem ser conferidos no jogo. '+String(suggestion.reason??'').slice(0,220);
