@@ -32,6 +32,9 @@ assert.equal(slots.skills[1].status,'PENDENTE');
 assert.equal(slots.boosters[0].status,'CONFIRMADO');
 assert.equal(slots.boosters[1].status,'PENDENTE');
 assert.equal(buildCardSlotsViewR561({...card,additionalSkillSlotsR560:undefined}).skills[0].status,'REGISTRADO');
+const ocrOnly=buildCardSlotsViewR561({...card,additionalSkillSlotsR560:[{slot:1,skill:'Passe de primeira',source:'OCR'}]});
+assert.equal(ocrOnly.skills[0].status,'REGISTRADO','OCR recognition is not confirmation of ownership.');
+assert.equal(buildCardSlotsViewR561({...card,boosterSlotsR560:{...card.boosterSlotsR560,source:'CATALOGO_VERIFICADO'}}).boosters[0].status,'REGISTRADO','Catalog identity is not proof of a booster slot.');
 
 const result={parsed:card,training:{passing:4},validation:{confirmed:false,level:'review'}} as any;
 const record={fingerprint:cardIdentityFingerprintR126(card),status:'pendente',result} as any;
