@@ -22,6 +22,8 @@ export function SkillBoosterPlanningPanelR567({result}:{result:AnalysisResult}) 
     result.parsed.impetos?.[1]?.name ?? '');
   const [boosterStatus,setBoosterStatus]=useState<'NAO_CONFIRMADO'|'DISPONIVEL'|'OCUPADO'|'SEM_VAGA'>('NAO_CONFIRMADO');
   const [boosterReviewed,setBoosterReviewed]=useState(false);
+  const [craftingName,setCraftingName]=useState('');
+  const [craftingSelectionConfirmed,setCraftingSelectionConfirmed]=useState(false);
   const [skills,setSkills]=useState('');
   const [skillCost,setSkillCost]=useState('');
   const [boosters,setBoosters]=useState('');
@@ -57,11 +59,14 @@ export function SkillBoosterPlanningPanelR567({result}:{result:AnalysisResult}) 
     skillCostConfirmed,
     boosterTokens:count(boosters),
     boosterCostTokens:count(boosterCost),
+    selectableCraftingName:craftingName||null,
+    craftingSelectionConfirmed,
     inventoryConfirmed,
     costConfirmed
     });
   },[result,slotNames,slotReviewed,primaryName,secondaryName,boosterStatus,boosterReviewed,
-    skills,skillCost,skillCostConfirmed,boosters,boosterCost,inventoryConfirmed,costConfirmed]);
+    skills,skillCost,skillCostConfirmed,boosters,boosterCost,inventoryConfirmed,costConfirmed,
+    craftingName,craftingSelectionConfirmed]);
 
   return (
     <details className="luxury-panel" style={{marginBlock:12,padding:14}}>
@@ -136,6 +141,20 @@ export function SkillBoosterPlanningPanelR567({result}:{result:AnalysisResult}) 
         <label><input type="checkbox" checked={skillCostConfirmed}
           onChange={event=>setSkillCostConfirmed(event.target.checked)}/>
           Conferi o custo da seleção de habilidade no jogo.
+        </label>
+        <label>Ímpeto efetivamente selecionável no Booster Crafting
+          <select value={craftingName} onChange={event=>{
+            setCraftingName(event.target.value);setCraftingSelectionConfirmed(false);
+          }}>
+            <option value="">Selecionar apenas após conferir no jogo</option>
+            {(result.recommendedImpetos??[]).map(suggestion=>(
+              <option key={suggestion.name} value={suggestion.name}>{suggestion.name}</option>
+            ))}
+          </select>
+        </label>
+        <label><input type="checkbox" checked={craftingSelectionConfirmed}
+          onChange={event=>setCraftingSelectionConfirmed(event.target.checked)}/>
+          Confirmei que o ímpeto escolhido é selecionável no Booster Crafting.
         </label>
         <label><input type="checkbox" checked={costConfirmed}
           onChange={event=>setCostConfirmed(event.target.checked)}/>
