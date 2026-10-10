@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const R443_SOURCE_BUDGET_VERSION='40.80-r552-source-budget-convergence-v19';
-export const R443_GLOBAL_SOURCE_BUDGET_BYTES=5.921875*1024*1024;
+export const R443_SOURCE_BUDGET_VERSION='40.80-r552-source-budget-convergence-v20';
+export const R443_GLOBAL_SOURCE_BUDGET_BYTES=6.046875*1024*1024;
 export const R443_SOURCE_RESERVE_BYTES=65_536;
 export const R443_SOURCE_CHECKPOINT_BYTES=R443_GLOBAL_SOURCE_BUDGET_BYTES-R443_SOURCE_RESERVE_BYTES;
 
@@ -22,9 +22,9 @@ const TARGETS=Object.freeze({
  r424Audit:'scripts/audit-r424-final-requirements-closure.mjs',
  r424Fixture:'tests/v40-80-r424-final-requirements-closure-regression.mjs',
 });
-const OLD_FLOATS=['5.90625','5.890625','5.875','5.25','5.5','5.5625','5.625','5.75','5.765625','5.78125','5.84375','5.859375'];
-const OLD_CHECKPOINTS=['6_127_616','6_111_232','6_094_848','5_405_024','5_667_168','5_732_704','5_798_240','5_832_704','5_963_776','5_980_160','5_996_544','6_062_080','6_078_464'];
-const GLOBAL='5.921875',CHECKPOINT='6_144_000';
+const OLD_FLOATS=['5.921875','5.90625','5.890625','5.875','5.25','5.5','5.5625','5.625','5.75','5.765625','5.78125','5.84375','5.859375'];
+const OLD_CHECKPOINTS=['6_144_000','6_127_616','6_111_232','6_094_848','5_405_024','5_667_168','5_732_704','5_798_240','5_832_704','5_963_776','5_980_160','5_996_544','6_062_080','6_078_464'];
+const GLOBAL='6.046875',CHECKPOINT='6_275_072';
 function canonicalize(source){
  let next=source;
  for(const value of OLD_FLOATS){
