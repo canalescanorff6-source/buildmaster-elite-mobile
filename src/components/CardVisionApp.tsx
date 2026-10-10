@@ -1035,7 +1035,7 @@ export function CardVisionApp() {
       {mainSection === 'time' && (
         <SectionErrorBoundary area="meu-time-completo">
           <section className="bm-v34-team-workspace bm-r526-tactics" aria-label="Meu Time">
-            <IntegratedTeamLab team={integratedTeam} players={integratedPlayers} records={centralMatchRecords} teamStyle={teamStyle}
+            <IntegratedTeamLab team={integratedTeam} players={integratedPlayers} records={centralMatchRecords} teamStyle={teamStyle} selectedManager={selectedManager}
               onOpenFormationLab={() => { setTeamAdvancedOpen(true); window.requestAnimationFrame(() => document.querySelector<HTMLDetailsElement>('.bm-v34-team-advanced')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}
               onPrepareMatch={() => openMainSection('partidas')}
               onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada. A posição escolhida de cada jogador foi preservada.`); }} />
