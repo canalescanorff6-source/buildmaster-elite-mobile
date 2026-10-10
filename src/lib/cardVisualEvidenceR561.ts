@@ -6,7 +6,8 @@ import { deriveProjectedPlayerStateR504, verifiedTrainingBaseAttributes } from '
 export type SlotEvidenceStatusR561 = 'CONFIRMADO' | 'REGISTRADO' | 'PENDENTE' | 'LIVRE_CONFIRMADA' | 'SEM_VAGA';
 export type DisplaySlotR561 = { label: string; value: string | null; status: SlotEvidenceStatusR561; source: string | null };
 const named = (x: unknown): x is string => typeof x === 'string' && x.trim().length > 0;
-const verified = (x: unknown) => x === 'MANUAL' || x === 'OCR' || x === 'CATALOGO_VERIFICADO';
+// OCR and a catalog prove recognition, not ownership or actual free slots.
+const verified = (x: unknown) => x === 'MANUAL';
 
 /**
  * Do not equate an OCR result or legacy array with verified possession.
