@@ -38,7 +38,7 @@ import { CLEAN_RESULT_PRIMARY_VIEWS } from '@/lib/cleanExperience';
 import { canonicalizeSkillList } from '@/lib/officialSkillIdentity';
 import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 import type { ManagerRecord } from '@/lib/managers';
-import { buildCardSlotsViewR561, buildManagerAttributeViewR561 } from '@/lib/cardVisualEvidenceR561';
+import { ResultEvidencePanelR561 } from '@/components/result/ResultEvidencePanelR561';
 import { CardChatConsultation } from './CardChatConsultation';
 import { POSITION_PT, TACTICAL_STYLE_NAME } from '@/lib/analyzerDomain';
 import type { DynamicRulePack } from '@/modules/builds/dynamicRules';
@@ -347,29 +347,7 @@ export function ResultCard({ result, selectedManager, playerImage, skillProgress
 
   return (
     <section className="result-panel bm2820-result-screen bm-r524-result">
-      <details className="luxury-panel" style={{ marginBlock: 12, padding: 14 }}>
-        <summary style={{ cursor: 'pointer', fontWeight: 700 }}>Evidências da carta R561 — habilidades, ímpetos e técnico</summary>
-        <p className="panel-note">Os 5 slots adicionais e 2 ímpetos abaixo respeitam a proveniência. REGISTRADO não é confirmação de posse.</p>
-        <div className="v27-pairing-list">
-          {buildCardSlotsViewR561(result.parsed).skills.map(slot => (
-            <span key={slot.label}>{slot.label}: {slot.value ?? '—'} [{slot.status}]</span>
-          ))}
-          {buildCardSlotsViewR561(result.parsed).boosters.map(slot => (
-            <span key={slot.label}>{slot.label}: {slot.value ?? '—'} [{slot.status}]</span>
-          ))}
-        </div>
-        {buildManagerAttributeViewR561(result, selectedManager) && (
-          <div className="v27-pairing-list">
-            <strong>{selectedManager?.name}: projeção do técnico (não é atributo observado)</strong>
-            {buildManagerAttributeViewR561(result, selectedManager)?.rows.map(row => (
-              <span key={row.key}>{row.key}: {row.status === 'APLICADO'
-                ? String(row.base) + ' + ' + row.bonus + ' = ' + row.projected + ' (PROJEÇÃO)'
-                : 'PENDENTE — + ' + row.bonus + ' não aplicado ao print'}</span>
-            ))}
-          </div>
-        )}
-        <small>A base sem bônus precisa ser comprovada separadamente. Nenhum atributo do print ou do Cofre foi alterado.</small>
-      </details>
+      <ResultEvidencePanelR561 result={result} selectedManager={selectedManager} />
       <section className={`result-player-hero luxury-panel bm-r524-result-hero ${heroExpanded ? 'is-expanded' : ''} ${playerImage ? 'has-card-image' : ''}`}>
         <figure className={`result-player-art ${playerImage ? 'has-card-image' : 'is-empty'}`}>
           {playerImage ? <img src={playerImage} alt={`Carta recortada de ${card.playerName}`} /> : <div className="result-player-art-empty"><Trophy size={42} /><span>Sem imagem da carta</span></div>}
