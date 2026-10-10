@@ -32,11 +32,13 @@ export type R567Input = {
   recommendedImpetos: readonly ImpetoRecommendation[];
   /** Counts are user's own confirmed inventory values; null means unknown. */
   skillTokens: number | null;
+  skillCostTokens: number | null;
   boosterTokens: number | null;
   /** Verified tokens required for one selected craft, not assumed from icon count. */
   boosterCostTokens: number | null;
   inventoryConfirmed: boolean;
   costConfirmed: boolean;
+  skillCostConfirmed: boolean;
 };
 
 function skillKey(value: string): string {
@@ -60,6 +62,7 @@ export function planSkillBoosterIntelligenceR567(input:R567Input):R567Plan {
   const skillTokensConfirmed=tokens(input.skillTokens,input.inventoryConfirmed);
   const boosterTokensConfirmed=tokens(input.boosterTokens,input.inventoryConfirmed);
   const boosterCostConfirmed=tokens(input.boosterCostTokens,input.costConfirmed);
+  const skillCostConfirmed=tokens(input.skillCostTokens,input.skillCostConfirmed);
   if (skillTokensConfirmed===null || boosterTokensConfirmed===null)
     alerts.push('Quantidade de tokens não confirmada. Nenhum gasto pode ser autorizado.');
   const slots=card.additionalSkillSlotsR560??[];
@@ -93,10 +96,10 @@ export function planSkillBoosterIntelligenceR567(input:R567Input):R567Plan {
     else if(!isOfficialAdditionalSkillIdentity(label)){decision='NAO_RECONHECIDO';reason='Nome não confirmado no catálogo atual.';}
     else if(!trustedSlots){reason='Conferir os cinco slots adicionais e as habilidades já presentes.';}
     else if(!freeSlots.length || assigned>=freeSlots.length){decision='SEM_VAGA';reason='Nenhuma vaga adicional comprovadamente livre.';}
-    else if(skillTokensConfirmed===null){reason='Confirme a quantidade real de tokens de habilidade.';}
-    else if(usedSkillTokens>=skillTokensConfirmed){decision='PENDENTE';reason='Tokens disponíveis insuficientes; planejar aquisição, sem gasto automático.';}
+    else if(skillTokensConfirmed===null || skillCostConfirmed===null || skillCostConfirmed===0){reason='Confirmar a quantidade e o custo real dos tokens de habilidade.';}
+    else if(usedSkillTokens+skillCostConfirmed>skillTokensConfirmed){decision='PENDENTE';reason='Tokens insuficientes para o custo confirmado da seleção.';}
     else{
-      decision='RECOMENDAR';slot=String(freeSlots[assigned].slot);assigned++;usedSkillTokens++;
+      decision='RECOMENDAR';slot=String(freeSlots[assigned].slot);assigned++;usedSkillTokens+=skillCostConfirmed;
       reason='Candidato sugerido para vaga livre confirmada; aceite é manual. '+String(suggestion.reason??'').slice(0,220);
     }
     skills.push({name:label,kind:'HABILIDADE',decision,slot,reason});
