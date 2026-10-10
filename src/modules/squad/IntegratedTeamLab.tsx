@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Crown,
+  ClipboardCopy,
   Download,
   Gamepad2,
   History,
@@ -18,6 +19,10 @@ import {
   Users
 } from 'lucide-react';
 import { buildTeamDiagnosis, type IntegratedPlayerRecord, type TeamDiagnosis } from '@/modules/core/centralIntelligence';
+import type { ManagerRecord } from '@/lib/managers';
+import { buildTacticalSnapshotR562 } from '@/lib/tacticalSnapshotR562';
+import { evaluateManagerLinksR560 } from '@/lib/managerLinkEngineR560';
+import { cardIdentityFingerprintR126 } from '@/lib/cardIdentityFingerprintR126';
 import type { TacticalFormation, TacticalStyle } from '@/lib/analyzer';
 import type { MatchValidationRecord } from '@/lib/appStartupContractsR200';
 import { FORMATION_BLUEPRINTS } from '@/lib/formationRoleEngine';
@@ -42,6 +47,7 @@ type Props = {
   players: IntegratedPlayerRecord[];
   records: MatchValidationRecord[];
   teamStyle: TacticalStyle;
+  selectedManager: ManagerRecord | null;
   onOpenFormationLab: () => void;
   onPrepareMatch: () => void;
   onFormationChange: (formation: TacticalFormation) => void;
@@ -67,13 +73,26 @@ function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toLocaleUpperCase('pt-BR')).join('') || '?';
 }
 
-export function IntegratedTeamLab({ team, players, records, teamStyle, onOpenFormationLab, onPrepareMatch, onFormationChange }: Props) {
+export function IntegratedTeamLab({ team, players, records, teamStyle, selectedManager, onOpenFormationLab, onPrepareMatch, onFormationChange }: Props) {
   const [tab, setTab] = useState<TeamTab>('escalacao');
   const [gameMode, setGameMode] = useState(false);
   const [savedNotice, setSavedNotice] = useState('');
+  const [confirmedLineupKeyR562, setConfirmedLineupKeyR562] = useState('');
+  const [manualCopyR562, setManualCopyR562] = useState('');
+  const [copyingSnapshotR562, setCopyingSnapshotR562] = useState(false);
   const [comparisonFormation, setComparisonFormation] = useState<TacticalFormation>('4-3-3');
   const [defenseFormationR566, setDefenseFormationR566] = useState<TacticalFormation>('4-4-2');
   const [defenseMappingR566, setDefenseMappingR566] = useState<Record<string, string>>({});
+  const lineupSignatureR562 = [team.formation, teamStyle, selectedManager?.id ?? 'PENDENTE',
+    ...team.lineup.map(fit => fit.slot.id + ':' + (fit.player ? cardIdentityFingerprintR126(fit.player.parsed) : 'VAZIO'))
+  ].join('|');
+  const lineupConfirmedR562 = !!confirmedLineupKeyR562 && confirmedLineupKeyR562 === lineupSignatureR562;
+  const managerLinksR560 = evaluateManagerLinksR560(selectedManager, team.lineup.filter(fit => fit.player).map(fit => ({
+    playerName: fit.player!.parsed.playerName,
+    position: fit.slot.position,
+    playstyle: fit.player!.parsed.offensivePlaystyle || fit.player!.parsed.playstyle || null,
+    fingerprint: cardIdentityFingerprintR126(fit.player!.parsed),
+  })), lineupConfirmedR562 && team.filledSlots === 11 && team.totalSlots === 11);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const detailRef = useRef<HTMLDivElement | null>(null);
   const comparisonTeam = useMemo(() => buildTeamDiagnosis(players, comparisonFormation, teamStyle), [players, comparisonFormation, teamStyle]);
@@ -126,6 +145,23 @@ export function IntegratedTeamLab({ team, players, records, teamStyle, onOpenFor
     upsertPersonalPreset({ name: `${team.formation} • ${new Date().toLocaleDateString('pt-BR')}`, category: 'time', payload: { formation: team.formation, globalScore: team.globalScore, lineup: team.lineup.map((item) => ({ slot: item.slot.id, player: item.player?.parsed.playerName ?? null })) } });
     setSavedNotice('Preset salvo na Biblioteca pessoal.');
     window.setTimeout(() => setSavedNotice(''), 2500);
+  }
+
+  async function copyTacticalSnapshotR562() {
+    if (copyingSnapshotR562) return;
+    const snapshot = buildTacticalSnapshotR562({
+      team, teamStyle, selectedManager, players, lineupConfirmed: lineupConfirmedR562
+    });
+    setCopyingSnapshotR562(true);
+    setManualCopyR562('');
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard indisponível');
+      await navigator.clipboard.writeText(snapshot);
+      setSavedNotice('Snapshot tático copiado. Nenhum dado foi enviado para uma API.');
+    } catch {
+      setManualCopyR562(snapshot);
+      setSavedNotice('Cópia automática indisponível: selecione e copie o texto manualmente abaixo.');
+    } finally { setCopyingSnapshotR562(false); }
   }
 
   function exportTeam() {
@@ -213,11 +249,18 @@ export function IntegratedTeamLab({ team, players, records, teamStyle, onOpenFor
         <button type="button" role="tab" aria-selected={tab === 'banco'} className={tab === 'banco' ? 'active' : ''} onClick={() => selectTab('banco')}>Banco</button>
         <button type="button" onClick={saveTeamPreset}><Save size={16}/> Salvar</button>
         <button type="button" onClick={exportTeam}><Download size={16}/> Exportar</button>
+        <button type="button" disabled={copyingSnapshotR562} onClick={() => void copyTacticalSnapshotR562()}><ClipboardCopy size={16}/>{copyingSnapshotR562 ? 'Copiando...' : 'Copiar Snapshot'}</button>
         <button type="button" onClick={() => importInputRef.current?.click()}><UploadCloud size={16}/> Importar</button>
         <button type="button" aria-pressed={gameMode} onClick={() => setGameMode((value) => !value)}><Gamepad2 size={16}/>{gameMode ? 'Modo normal' : 'Modo jogo'}</button>
         <input ref={importInputRef} className="sr-only" type="file" accept="application/json,.json" onChange={(event) => void importTeam(event.target.files?.[0])}/>
       </nav>
       {savedNotice && <div className="refined-inline-success" role="status"><CheckCircle2 size={16}/>{savedNotice}</div>}
+      {manualCopyR562 && <div className="luxury-panel" style={{padding:12}}>
+        <label htmlFor="r562-snapshot-manual">Snapshot tático — cópia manual</label>
+        <textarea id="r562-snapshot-manual" readOnly rows={10} style={{width:'100%',maxWidth:'100%'}}
+          value={manualCopyR562} onFocus={event => event.currentTarget.select()}/>
+        <small>Selecione o texto e copie. Não há transmissão automática.</small>
+      </div>}
 
       <div ref={detailRef} className="bm34-tab-panel" role="tabpanel" aria-live="polite">
       {tab === 'escalacao' && <section className="bm32-team-detail-grid">
@@ -276,6 +319,22 @@ export function IntegratedTeamLab({ team, players, records, teamStyle, onOpenFor
       </section>}
 
       {tab === 'tatica' && <section className="bm32-team-tactics">
+        <article className="luxury-panel" aria-label="Confirmação de XI e vínculos R560">
+          <header><ShieldCheck size={19}/><div><strong>Escalação confirmada R560–R562</strong>
+            <small>Confirmação local por edição da carta e posição no campo</small></div></header>
+          <label><input type="checkbox" checked={lineupConfirmedR562}
+            disabled={team.filledSlots !== 11 || team.totalSlots !== 11 || !selectedManager}
+            onChange={event => setConfirmedLineupKeyR562(event.target.checked ? lineupSignatureR562 : '')}/>
+            Confirmo que conferi os 11 jogadores, posições, estilos e técnico apresentados.</label>
+          <p>{selectedManager ? selectedManager.name + ' • ' + selectedManager.version : 'PENDENTE: selecione um técnico no Plano de Jogo.'}</p>
+          <div className="v27-pairing-list">
+            {managerLinksR560.length ? managerLinksR560.map(link =>
+              <span key={link.id}><CheckCircle2 size={15}/>{link.name}: {link.status}
+                {link.missing.length ? ' • requisitos: ' + link.missing.join(', ') : ''}</span>)
+            : <span>Vínculos: PENDENTE — técnico sem combinações cadastradas.</span>}
+          </div>
+          <small>Vínculos ATIVO/INATIVO refletem somente requisitos locais confirmados; ativação no jogo não verificada. Alterações na escalação exigem nova confirmação.</small>
+        </article>
         <article className="luxury-panel">
           <header><Target size={19}/><div><strong>Estilo coletivo</strong><small>{team.styleFit}% de encaixe</small></div></header>
           <p>{team.styleNote}</p>
