@@ -1,6 +1,7 @@
 import { canonicalizeOffensivePlaystyleR124 } from '../../lib/efootball2027PhaseCatalogR124';
 import { ATTRIBUTE_INPUTS, type PositionCode } from '../../lib/analyzerDomain';
 import { deriveReaderCanonicalEvidenceR549 } from '../../lib/readerCanonicalEvidenceR549';
+import { inspectReaderV2OptionalFieldsR563 } from './readerV2OptionalCaptureR563';
 import { extractCanonicalSkillsFromText } from '../../lib/officialSkillIdentity';
 import { parseAttributes } from '../analysis/cardEvidenceParserR130';
 import type {
@@ -138,6 +139,7 @@ export function buildReaderV2ReviewDraft(
   const labeledPosition = fields.map(field => normalizedText(field.value).match(/posicao (?:principal|da carta)\s*[:=-]\s*([a-z]{2,3})\b/)?.[1]).find(Boolean) ?? '';
   const mainPosition = normalizeReaderV2Position(fieldValue(evidence, 'mainPosition')) ?? normalizeReaderV2Position(labeledPosition) ?? '';
   const canonical = deriveReaderCanonicalEvidenceR549(fields);
+  const optionalCaptureR563 = inspectReaderV2OptionalFieldsR563(fields);
   canonical.uncertainKeys.forEach(key => addUncertain(uncertainKeys,key));
   if (level && points && Number(points) !== (Number(level)-1)*2) {addUncertain(uncertainKeys,'level');addUncertain(uncertainKeys,'points');}
 
@@ -158,6 +160,7 @@ export function buildReaderV2ReviewDraft(
     attributeValues: evidence.attributeValues ? [...evidence.attributeValues] : undefined,
     attributeRows: evidence.attributeRows ? [...evidence.attributeRows] : undefined,
     skillValues: canonical.skillValues,
+    optionalCaptureR563,
     impetoName: canonical.impetoName,
     impetoNames: canonical.impetoNames,
     specialSkillValues: canonical.specialSkillValues,
