@@ -211,9 +211,10 @@ export function createReaderV2TesseractWorkerFactory(
         await useLanguage(positionRetry?'eng':'por');
         await worker.setParameters(paramsForKey(key));
         const result = await recognizeWithDeadline(worker, input);
+        const confidence=Number(result.data.confidence)||0;
         return {
-          text: positionRetry&&result.data.confidence<80?'':String(result.data.text ?? '').trim(),
-          confidence: Math.max(0, Math.min(100, Math.round(Number(result.data.confidence) || 0))),
+          text: positionRetry&&confidence<80?'':String(result.data.text ?? '').trim(),
+          confidence:Math.max(0, Math.min(100, Math.round(confidence))),
         };
       },
       async terminate() {

@@ -7,6 +7,25 @@ import {
 
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+async function testPositionRetryNeedsConfidence() {
+  const Module=require('node:module');
+  const originalLoad=Module._load;
+  let confidence:number|undefined;
+  const native={setParameters:async()=>undefined,reinitialize:async()=>undefined,recognize:async()=>({data:{text:'GK',confidence}}),terminate:async()=>undefined};
+  Module._load=(request:string,...args:unknown[])=>request==='tesseract.js'?{OEM:{LSTM_ONLY:1},createWorker:async()=>native}:originalLoad(request,...args);
+  let worker:ReaderV2WorkerPort|undefined;
+  try {
+    const {createReaderV2TesseractWorkerFactory}=require('../src/modules/card-reader-v2/readerV2TesseractWorker') as {createReaderV2TesseractWorkerFactory():ReaderV2WorkerFactory};
+    worker=await createReaderV2TesseractWorkerFactory()();
+    for(const value of [undefined,NaN,79,79.9]){
+      confidence=value;
+      assert.equal((await worker.recognize('crop','mainPosition#retry')).text,'','Posição recuperada exige confiança válida de pelo menos 80.');
+    }
+    confidence=85;
+    assert.deepEqual(await worker.recognize('crop','mainPosition#retry'),{text:'GK',confidence:85},'Posição legível com evidência forte continua aceita.');
+  } finally {await worker?.terminate();Module._load=originalLoad;}
+}
+
 async function testLifecycleAndSerialization() {
   let factoryCalls = 0;
   let terminateCalls = 0;
@@ -167,6 +186,7 @@ async function main() {
   await testCancelHardStopsHangingRecognition();
   await testRecoverableFieldTimeoutRestartsWorker();
   await testRecognitionErrorTerminatesWorker();
+  await testPositionRetryNeedsConfidence();
   console.log('R542-B/C + R543-A/B aprovado: lifecycle determinístico, OCR serial e cancelamento hard-stop.');
 }
 
