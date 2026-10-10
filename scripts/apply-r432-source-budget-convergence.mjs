@@ -3,16 +3,16 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { R443_GLOBAL_SOURCE_BUDGET_BYTES, R443_SOURCE_RESERVE_BYTES, R443_SOURCE_CHECKPOINT_BYTES } from './apply-r443-source-budget-convergence.mjs';
 
-export const R432_SOURCE_BUDGET_CONVERGENCE_VERSION = '40.80-r551-r432-source-budget-convergence-v11';
+export const R432_SOURCE_BUDGET_CONVERGENCE_VERSION = '40.80-r551-r432-source-budget-convergence-v12';
 export const R432_GLOBAL_SOURCE_BUDGET_BYTES = R443_GLOBAL_SOURCE_BUDGET_BYTES;
 export const R432_SOURCE_RESERVE_BYTES = R443_SOURCE_RESERVE_BYTES;
 export const R432_SOURCE_CHECKPOINT_BYTES = R443_SOURCE_CHECKPOINT_BYTES;
 
-const GLOBAL_LITERAL = '5.921875';
-const CHECKPOINT_LITERAL = '6_144_000';
-const GLOBAL_LABEL = '5,921875 MiB';
-const OLD_GLOBALS = ['5.875','5.25','5.5','5.5625','5.625','5.75','5.765625','5.78125','5.84375','5.859375'];
-const OLD_CHECKPOINTS = ['6_094_848','5_405_024','5_667_168','5_732_704','5_798_240','5_832_704','5_963_776','5_980_160','5_996_544','6_062_080','6_078_464'];
+const GLOBAL_LITERAL = '6.046875';
+const CHECKPOINT_LITERAL = '6_275_072';
+const GLOBAL_LABEL = '6,046875 MiB';
+const OLD_GLOBALS = ['5.921875','5.875','5.25','5.5','5.5625','5.625','5.75','5.765625','5.78125','5.84375','5.859375'];
+const OLD_CHECKPOINTS = ['6_144_000','6_094_848','5_405_024','5_667_168','5_732_704','5_798_240','5_832_704','5_963_776','5_980_160','5_996_544','6_062_080','6_078_464'];
 
 const TARGETS = Object.freeze({
   bundle: 'scripts/check-bundle-budget.mjs',
