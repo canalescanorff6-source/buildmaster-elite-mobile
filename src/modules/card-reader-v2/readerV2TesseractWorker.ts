@@ -2,7 +2,7 @@ import type TesseractNamespace from 'tesseract.js';
 import type { ReaderV2WorkerFactory, ReaderV2WorkerPort } from './readerV2OcrWorker';
 import type { ReaderV2FieldKey } from './readerV2Types';
 import { readerV2ValueRows } from './readerV2CropPreparation';
-import { readerV2CellNumber, thresholdReaderV2Cell } from './readerV2NumericCell';
+import { readerV2CellNumber, thresholdReaderV2Cell, corroboratedReaderV2Cell } from './readerV2NumericCell';
 
 const READER_V2_WORKER_BOOT_TIMEOUT_MS = 18_000;
 const READER_V2_RECOGNITION_TIMEOUT_MS = 16_000;
@@ -139,8 +139,7 @@ export function createReaderV2TesseractWorkerFactory(
               for (const preparation of ['baseline','binary','clean'] as const) {
                 if (preparation !== 'baseline') thresholdReaderV2Cell(cell,preparation === 'clean');
                 for (const psm of ['7','6'] as const) {
-                  // Restricting the LSTM alphabet can erase valid96 or force a
-                  // partial9. Decode freely, then validate the complete cell.
+                  // Validate complete digits after unrestricted decoding.
                   await worker.setParameters({...paramsForKey(key),tessedit_char_whitelist:'',tessedit_pageseg_mode:psm as TesseractNamespace.PSM});
                   const remaining=deadline-Date.now();
                   if (remaining<=0) throw recoverableRecognitionError('A coluna de atributos excedeu o tempo seguro de OCR.');
@@ -156,8 +155,7 @@ export function createReaderV2TesseractWorkerFactory(
                 if (accepted !== null) break;
               }
               if (accepted === null) {
-                // The alternative model only sees the original prepared cell.
-                // Its transformed reads are not independent corroboration.
+                // The alternative model reads the original prepared cell.
                 context.clearRect(0,0,cell.width,cell.height);
                 context.drawImage(input as HTMLCanvasElement,rectangle.left,rectangle.top,rectangle.width,rectangle.height,0,0,cell.width,cell.height);
                 await useLanguage('eng',deadline-Date.now());
@@ -170,16 +168,17 @@ export function createReaderV2TesseractWorkerFactory(
                 if (value!==null && confidence>=90) {accepted=value;candidates.push({value,confidence});}
               }
               if (accepted === null) {
-                // Retry unresolved cells from the original pixels with a quiet
-                // border. Never reinterpret punctuation as a digit.
+                // Retry original pixels with padding; punctuation stays invalid.
                 const padding = 20;
-                cell.width = rectangle.width * 2 + padding * 2;
-                cell.height = rectangle.height * 2 + padding * 2;
-                const padded = cell.getContext('2d')!;
-                padded.fillStyle = '#fff';
-                padded.fillRect(0,0,cell.width,cell.height);
-                padded.drawImage(input as HTMLCanvasElement,rectangle.left,rectangle.top,rectangle.width,rectangle.height,padding,padding,rectangle.width*2,rectangle.height*2);
-                for (const model of ['por','eng'] as const) {
+                const strongRetries:typeof candidates=[];
+                for(const scale of [2,3,1.5]){
+                 cell.width = Math.round(rectangle.width * scale) + padding * 2;
+                 cell.height = Math.round(rectangle.height * scale) + padding * 2;
+                 const padded = cell.getContext('2d')!;
+                 padded.fillStyle = '#fff';
+                 padded.fillRect(0,0,cell.width,cell.height);
+                 padded.drawImage(input as HTMLCanvasElement,rectangle.left,rectangle.top,rectangle.width,rectangle.height,padding,padding,rectangle.width*scale,rectangle.height*scale);
+                 for (const model of ['por','eng'] as const) {
                   await useLanguage(model,deadline-Date.now());
                   await worker.setParameters({...paramsForKey(key),tessedit_char_whitelist:'',tessedit_pageseg_mode:'7' as TesseractNamespace.PSM});
                   const remaining=deadline-Date.now();
@@ -188,7 +187,14 @@ export function createReaderV2TesseractWorkerFactory(
                   const confidence=Number(data.confidence||0);
                   const value=readerV2CellNumber(String(data.text??''),confidence);
 
-                  if (value!==null && confidence>=90) {accepted=value;candidates.push({value,confidence});break;}
+                  if(value!==null&&confidence>=90){
+                   candidates.push({value,confidence});
+                   if(scale===2)accepted=value;
+                   else {strongRetries.push({value,confidence});accepted=corroboratedReaderV2Cell(strongRetries)}
+                  }
+                  if(accepted!==null)break;
+                 }
+                 if(accepted!==null)break;
                 }
               }
               attributeRows.push(accepted);
@@ -201,11 +207,12 @@ export function createReaderV2TesseractWorkerFactory(
             attributeRows,
           };
         }
-        await useLanguage('por');
+        const positionRetry=String(key)==='mainPosition#retry';
+        await useLanguage(positionRetry?'eng':'por');
         await worker.setParameters(paramsForKey(key));
         const result = await recognizeWithDeadline(worker, input);
         return {
-          text: String(result.data.text ?? '').trim(),
+          text: positionRetry&&result.data.confidence<80?'':String(result.data.text ?? '').trim(),
           confidence: Math.max(0, Math.min(100, Math.round(Number(result.data.confidence) || 0))),
         };
       },

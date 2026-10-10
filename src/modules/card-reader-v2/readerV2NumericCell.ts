@@ -6,6 +6,13 @@ export function readerV2CellNumber(text: string, confidence: number): number | n
   return value >= 10 && value <= 110 ? value : null;
 }
 
+/** Additional retries require strong agreement. */
+export function corroboratedReaderV2Cell(reads:Array<{value:number|null;confidence:number}>):number|null {
+ const strong=reads.filter(read=>read.value!==null&&read.confidence>=90);
+ if(strong.length<2||strong.some(read=>read.value!==strong[0].value))return null;
+ return strong[0].value;
+}
+
 /** Bounded retry on one small cell; the source crop remains available. */
 export function thresholdReaderV2Cell(canvas: HTMLCanvasElement, removeNoise = false): void {
   const context = canvas.getContext('2d', {willReadFrequently:true});

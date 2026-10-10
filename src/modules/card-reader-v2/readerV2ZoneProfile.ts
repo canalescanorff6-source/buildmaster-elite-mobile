@@ -1,4 +1,5 @@
 import type { ReaderV2FieldKey, ReaderV2Zone } from './readerV2Types';
+import {mapReaderV2ZoneToFrame,type ReaderV2Frame} from './readerV2Frame';
 
 type LegacyCalibrationZoneLike = {
   key?: string;
@@ -65,4 +66,25 @@ export function mapLegacyCalibrationToReaderV2(zones: LegacyCalibrationZoneLike[
       enabled: zone.enabled !== false,
     };
   });
+}
+
+/** Saved coordinates belong to their original screenshot, not every import. */
+export function resolveReaderV2FrameZones(zones:ReaderV2Zone[],frame?:ReaderV2Frame):ReaderV2Zone[] {
+ if(!frame)return zones;
+ const attributes=zones.find(zone=>zone.key==='attributes'&&zone.enabled);
+ const fullProfile=zones.filter(zone=>zone.enabled&&READER_V2_DEFAULT_ZONES.some(standard=>standard.key===zone.key)).length>=8;
+ if(!fullProfile||!attributes||attributes.attributeLayout==='labels')return zones;
+ const centers=[.303,.632,.960];
+ const strips=[[.255,.340],[.590,.690],[.905,1]];
+ const columnsFit=centers.every((center,index)=>{
+  const x=frame.x+frame.w*center;
+  return x>=attributes.x+attributes.w*strips[index][0]&&x<=attributes.x+attributes.w*strips[index][1];
+ });
+ const rowsFit=Math.abs(attributes.y-(frame.y+frame.h*555/1600))<=frame.h*.04
+  &&Math.abs(attributes.y+attributes.h-(frame.y+frame.h*1085/1600))<=frame.h*.04;
+ if(columnsFit&&rowsFit)return zones;
+ return zones.map(zone=>{
+  const standard=READER_V2_DEFAULT_ZONES.find(candidate=>candidate.key===zone.key);
+  return standard?{...mapReaderV2ZoneToFrame(standard,frame),label:zone.label,enabled:zone.enabled}:zone;
+ });
 }

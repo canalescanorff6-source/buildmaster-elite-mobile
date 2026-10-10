@@ -9,11 +9,11 @@ import type {
   ReaderV2Progress,
   ReaderV2Zone,
 } from './readerV2Types';
-import { READER_V2_DEFAULT_ZONES } from './readerV2ZoneProfile';
+import { READER_V2_DEFAULT_ZONES, resolveReaderV2FrameZones } from './readerV2ZoneProfile';
 import { recoverReaderV2Identity } from './readerV2IdentityRecovery';
 
 export type ReadReaderV2ZonesInput = {
-  imageSession: Pick<ReaderV2ImageSession, 'withCrop'>;
+  imageSession: Pick<ReaderV2ImageSession, 'withCrop'> & Partial<Pick<ReaderV2ImageSession,'frame'>>;
   workerSession: Pick<ReaderV2OcrWorkerSession, 'recognize'>;
   zones?: ReaderV2Zone[];
   onProgress?: (progress: ReaderV2Progress) => void;
@@ -127,8 +127,7 @@ function isSemanticallyPlausible(field: ReaderV2FieldEvidence) {
 
   switch (field.key) {
     case 'playerName':
-      // The header also contains the style (for example Clássica nº 10).
-      // Validate the name line without rejecting a correctly read header.
+      // Style digits below the name do not invalidate the first line.
       return countLetters(value.split(/\r?\n/)[0]) >= 2 && !/\d/.test(value.split(/\r?\n/)[0]);
     case 'level':
     case 'points':
@@ -357,7 +356,7 @@ async function readAttributeField(
 }
 
 export async function readReaderV2Zones(input: ReadReaderV2ZonesInput): Promise<ReaderV2Evidence> {
-  const zones = (input.zones ?? READER_V2_DEFAULT_ZONES).filter((zone) => zone.enabled);
+  const zones = resolveReaderV2FrameZones(input.zones ?? READER_V2_DEFAULT_ZONES,input.imageSession.frame).filter((zone) => zone.enabled);
   const fields: ReaderV2FieldEvidence[] = [];
   const uncertainKeys: ReaderV2FieldKey[] = [];
   const reusableByGeometry = new Map<string, ReaderV2FieldEvidence>();

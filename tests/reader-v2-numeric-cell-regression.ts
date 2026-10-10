@@ -1,11 +1,13 @@
 import * as assert from 'node:assert/strict';
-import {readerV2CellNumber} from '../src/modules/card-reader-v2/readerV2NumericCell';
+import {readerV2CellNumber,corroboratedReaderV2Cell} from '../src/modules/card-reader-v2/readerV2NumericCell';
 assert.equal(readerV2CellNumber('96\n',86),96);
 assert.equal(readerV2CellNumber('102',96),102);
 for (const [text,confidence] of [['9%',99],['nn',99],['9',95],['7B',95],['ss',90],['93 77',99],['999',99],['78',0],['',99]] as const) {
   assert.equal(readerV2CellNumber(text,confidence),null,'Nunca completar números truncados ou substituir letras por dígitos.');
 }
 console.log('Células numéricas: número inteiro, faixa e confiança aprovados.');
+assert.equal(corroboratedReaderV2Cell([{value:108,confidence:94},{value:108,confidence:96}]),108);
+for(const reads of [[{value:108,confidence:94}],[{value:108,confidence:94},{value:108,confidence:89}],[{value:108,confidence:94},{value:103,confidence:96}],[{value:null,confidence:99},{value:108,confidence:96}]])assert.equal(corroboratedReaderV2Cell(reads),null,'Repetições adicionais exigem concordância forte e não podem resolver conflito por votação.');
 import {prepareReaderV2Crop} from '../src/modules/card-reader-v2/readerV2CropPreparation';
 const pixels=new Uint8ClampedArray(100*4);
 for(let index=0;index<100;index++)pixels.set(index<10?[255,255,255,255]:index<15?[0,0,0,255]:[255,220,0,255],index*4);
