@@ -1,0 +1,29 @@
+name: R566 Fluid Tactical DNA — regressões
+on:
+  pull_request:
+    paths:
+      - 'src/lib/fluidTacticalDnaR566.ts'
+      - 'src/modules/squad/IntegratedTeamLab.tsx'
+      - 'tests/r566-fluid-tactical-dna-regression.ts'
+      - '.github/workflows/r566-fluid-tactical-dna.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/lib/fluidTacticalDnaR566.ts'
+      - 'src/modules/squad/IntegratedTeamLab.tsx'
+      - 'tests/r566-fluid-tactical-dna-regression.ts'
+
+jobs:
+  fluid-tactical-dna:
+    name: Fases ofensiva/defensiva e slots manuais
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Regressão R566
+        run: node -r ./tests/_ts-require.cjs tests/r566-fluid-tactical-dna-regression.ts
