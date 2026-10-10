@@ -76,6 +76,7 @@ import { PreFinalCardReviewR548 } from '@/components/PreFinalCardReviewR548';
 import type { ReaderV2PreFinalConfirmation } from '@/modules/card-reader-v2/readerV2Review';
 import { FORMATION_SELECTION_OPTIONS_R191, SETTINGS_COMMANDS_R195 } from '@/modules/experience/cardVisionShellCatalogR191';
 import { persistMyTeamFormationR572, readMyTeamFormationR572, normalizeMyTeamFormationR572 } from '@/lib/myTeamFormationPreferenceR572';
+import { readMyTeamLayoutsR573, persistMyTeamLayoutsR573, sanitizeManualLayoutR573, type ManualTeamLayoutR573, type ManualTeamLayoutsR573 } from '@/lib/manualTeamEditorR573';
 type ReaderCaptureMode = 'single' | 'complete';
 
 // Perfis manuais antigos são migrados para o reconhecimento automático da carta.
@@ -174,6 +175,24 @@ export function CardVisionApp() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [sessionSaveState, setSessionSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [sessionHydrated, setSessionHydrated] = useState(false);
+  const [myTeamLayoutsR573, setMyTeamLayoutsR573] = useState<ManualTeamLayoutsR573>({});
+  useEffect(() => {
+    if (!sessionHydrated || startupSafeMode) return;
+    setMyTeamLayoutsR573(readMyTeamLayoutsR573());
+  }, [sessionHydrated, startupSafeMode, account?.profile.id]);
+  const activeManualFormationR573 = formation === 'AUTO' ? '4-2-2-2' : formation;
+  const activeManualLayoutR573 = myTeamLayoutsR573[activeManualFormationR573] ?? null;
+  function editManualTeamLayoutR573(next: ManualTeamLayoutR573 | null) {
+    const blueprint = FORMATION_BLUEPRINTS.find(item => item.id === activeManualFormationR573);
+    if (!blueprint) return;
+    const layouts = {...myTeamLayoutsR573};
+    if (next) layouts[blueprint.id] = sanitizeManualLayoutR573(blueprint,next);
+    else delete layouts[blueprint.id];
+    setMyTeamLayoutsR573(layouts);
+    if (!startupSafeMode && sessionHydrated && !persistMyTeamLayoutsR573(layouts))
+      setStatus('Ajuste do time aplicado, mas não foi possível salvar no dispositivo.');
+  }
+
   const deferredStartupReadyR155 = useDeferredStartupReadyR155(startupGateReady && sessionHydrated && !startupSafeMode);
   const backgroundResumeStartedRef = useRef(false);
   const [pendingBackgroundCheckpoint, setPendingBackgroundCheckpoint] = useState<BackgroundOcrCheckpoint | null>(null);
@@ -322,6 +341,7 @@ export function CardVisionApp() {
     renderHistory,
     formation,
     teamStyle,
+    manualLayout: activeManualLayoutR573,
     performanceMode,
     startupGateReady,
     startupSafeMode,
@@ -1058,7 +1078,7 @@ export function CardVisionApp() {
       {mainSection === 'time' && (
         <SectionErrorBoundary area="meu-time-completo">
           <section className="bm-v34-team-workspace bm-r526-tactics" aria-label="Meu Time">
-            <IntegratedTeamLab team={integratedTeam} selectedFormation={formation} players={integratedPlayers} records={centralMatchRecords} teamStyle={teamStyle} selectedManager={selectedManager}
+            <IntegratedTeamLab team={integratedTeam} selectedFormation={formation} manualLayout={activeManualLayoutR573} onManualLayoutChange={editManualTeamLayoutR573} players={integratedPlayers} records={centralMatchRecords} teamStyle={teamStyle} selectedManager={selectedManager}
               onOpenFormationLab={() => { setTeamAdvancedOpen(true); window.requestAnimationFrame(() => document.querySelector<HTMLDetailsElement>('.bm-v34-team-advanced')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}
               onPrepareMatch={() => openMainSection('partidas')}
               onFormationChange={chooseMyTeamFormationR572} />
