@@ -39,6 +39,9 @@ export type R567Input = {
   inventoryConfirmed: boolean;
   costConfirmed: boolean;
   skillCostConfirmed: boolean;
+  /** User confirms this exact name is selectable, not just recognized by OCR. */
+  selectableCraftingName: string | null;
+  craftingSelectionConfirmed: boolean;
 };
 
 function skillKey(value: string): string {
@@ -130,6 +133,7 @@ export function planSkillBoosterIntelligenceR567(input:R567Input):R567Plan {
     if(ownedBoosters.has(key)){decision='JA_POSSUI';reason='Ímpeto já registrado. Não substituir nem duplicar automaticamente.';}
     else if(suggestion.tier==='evitar'){decision='EVITAR';reason='Candidato desaconselhado pelo motor de análise.';}
     else if(!isRecognizableImpetoName(label)){decision='NAO_RECONHECIDO';reason='Ímpeto não identificado no catálogo; conferir no jogo.';}
+    else if(!input.craftingSelectionConfirmed || impetoKey(input.selectableCraftingName??'')!==key){reason='Confirmar que este ímpeto específico está disponível para seleção no Booster Crafting.';}
     else if(!craftingFree || usedBoosters>0){decision='SEM_VAGA';reason='Vaga de crafting não comprovada ou já reservada por outra proposta.';}
     else if(boosterTokensConfirmed===null || boosterCostConfirmed===null || boosterCostConfirmed===0 || boosterTokensConfirmed < boosterCostConfirmed){reason='Confirmar tokens disponíveis e custo real da seleção; recursos insuficientes ou sem prova.';}
     else {
