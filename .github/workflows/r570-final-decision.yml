@@ -1,0 +1,28 @@
+name: R570 — Painel decisório
+on:
+  pull_request:
+    paths:
+      - 'src/lib/finalDecisionR570.ts'
+      - 'src/components/result/FinalDecisionPanelR570.tsx'
+      - 'src/components/result/ResultEvidencePanelR561.tsx'
+      - 'tests/r570-final-decision-regression.ts'
+      - '.github/workflows/r570-final-decision.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/lib/finalDecisionR570.ts'
+      - 'tests/r570-final-decision-regression.ts'
+jobs:
+  r570:
+    name: Decisão consultiva e evidências completas
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Regressão R570
+        run: node -r ./tests/_ts-require.cjs tests/r570-final-decision-regression.ts
