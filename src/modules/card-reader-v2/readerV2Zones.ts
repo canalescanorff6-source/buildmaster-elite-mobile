@@ -408,7 +408,7 @@ export async function readReaderV2Zones(input: ReadReaderV2ZonesInput): Promise<
       }
     }
 
-    if (zone.key === 'skills' || zone.key === 'additionalSkills' || zone.key === 'impeto') {
+    if (zone.key === 'additionalSkills' || zone.key === 'impeto') {
       // Remove invisible OCR artifacts without rewriting ownership or inventing skills.
       // The raw pixels / raw text remain available for manual review.
       field = {...field, value: normalizeReaderV2OptionalTextR563(field.value)};
