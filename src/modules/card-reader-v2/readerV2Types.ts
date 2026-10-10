@@ -74,6 +74,7 @@ export interface ReaderV2ReviewDraft {
   attributeRows?: Array<number | null>;
   skillValues?: string[];
   optionalCaptureR563?: import('./readerV2OptionalCaptureR563').ReaderV2OptionalCaptureR563;
+  readQualityR569?: import('../../lib/readerEvidenceQualityR569').ReaderQualityR569;
   impetoName?: string;
   impetoNames?: string[];
   specialSkillValues?: string[];
