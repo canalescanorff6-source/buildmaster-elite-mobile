@@ -48,6 +48,9 @@ import { UnifiedIntelligenceCard } from '@/components/result/UnifiedIntelligence
 import { SupremeGameplayCard } from '@/components/result/SupremeGameplayCard';
 import { CalibrationV32Card } from '@/components/result/CalibrationV32Card';
 import { PremiumCleanResultV3810 } from '@/components/PremiumCleanResultV3810';
+import { CardEvidenceSlotsR561 } from '@/components/players/CardEvidenceSlotsR561';
+import { ManagerAttributePanelR561 } from '@/components/result/ManagerAttributePanelR561';
+import type { ManagerRecord } from '@/lib/managers';
 import type { PremiumCleanExportFormat } from '@/lib/premiumCleanResultV3810';
 import { AdvancedMotorV3750Panel } from '@/components/AdvancedMotorV3750Panel';
 import { GameplayDnaProfilesCard } from '@/components/result/GameplayDnaProfilesCard';
@@ -211,7 +214,7 @@ const ResultAdvancedWorkspaceR192 = dynamic(
 
 export type ResultTabRequest = { tab: ResultTab; token: number };
 
-export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveFicha, saveBusy = false, onRecalculate, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onReplaceOwnedSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, onApplyGameplayProfile, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack, onRestoreRulePackVersion, requestedTab, onRequestedTabHandled, advancedMode = false }: { result: AnalysisResult; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; saveBusy?: boolean; onRecalculate?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: (format?: PremiumCleanExportFormat) => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onReplaceOwnedSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; onApplyGameplayProfile?: (profileId: GameplayDnaProfileId) => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void; onRestoreRulePackVersion: (version: string) => void; requestedTab?: ResultTabRequest | null; onRequestedTabHandled?: () => void; advancedMode?: boolean }) {
+export function ResultCard({ result, playerImage, selectedManager, skillProgress, onSkillToggle, onSaveFicha, saveBusy = false, onRecalculate, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onReplaceOwnedSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, onApplyGameplayProfile, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack, onRestoreRulePackVersion, requestedTab, onRequestedTabHandled, advancedMode = false }: { result: AnalysisResult; playerImage: string | null; selectedManager?: ManagerRecord | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; saveBusy?: boolean; onRecalculate?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: (format?: PremiumCleanExportFormat) => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onReplaceOwnedSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; onApplyGameplayProfile?: (profileId: GameplayDnaProfileId) => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void; onRestoreRulePackVersion: (version: string) => void; requestedTab?: ResultTabRequest | null; onRequestedTabHandled?: () => void; advancedMode?: boolean }) {
   const [tab, setTab] = useState<ResultTab>('resumo');
   const [heroExpanded, setHeroExpanded] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -410,6 +413,9 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
           )}
         </div>
       </section>
+
+      <ManagerAttributePanelR561 result={result} selectedManager={selectedManager} />
+      <CardEvidenceSlotsR561 parsed={card} />
 
       {card.warnings.length > 0 && (
         <div className="alert-strip result-alert-strip bm-r524-alerts">
