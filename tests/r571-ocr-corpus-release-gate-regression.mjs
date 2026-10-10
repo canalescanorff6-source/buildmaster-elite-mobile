@@ -19,13 +19,13 @@ try{
   const item={
     caseId:'unit-test-1',sourceKind:'REAL_SCREENSHOT',reviewedByHuman:true,
     imagePath:'mock.png',imageSha256:hash,
-    mode:'automatic',deviceModel:'Unit test phone',resolution:'2400x1080',
+    mode:'automatic',gameVersion:'6.0.0',deviceModel:'Unit test phone',resolution:'2400x1080',
     cardType:'Épica',outcome:'completed',expected,
     observed:{playerName:'Exemplo',level:45,points:88,pointsSource:'print',
       attributeRows:[...expected.attributeRows],
       additionalSkills:['Passe de primeira'],boosters:['Passe']},
   };
-  const manifest={schemaVersion:1,kind:'REAL_DEVICE_OCR_CORPUS',sourceSha,apkSha256,cases:[item]};
+  const manifest={schemaVersion:1,kind:'REAL_DEVICE_OCR_CORPUS',gameVersion:'6.0.0',sourceSha,apkSha256,cases:[item]};
   const report=evaluateOcrCorpusR571(manifest,{rootDir:dir});
   assert.equal(report.testedCases,1);
   assert.equal(report.accuracy.attributes,1,'Exact labels exercise benchmark arithmetic.');
@@ -50,8 +50,13 @@ try{
   assert.equal(altered.accuracy.attributes,0.96154);
   assert.equal(altered.accuracy.points,0);
   assert.equal(altered.accuracy.completeCard,0);
-  const missing=evaluateOcrCorpusR571({schemaVersion:1,kind:'REAL_DEVICE_OCR_CORPUS',cases:[]});
+  const missing=evaluateOcrCorpusR571({schemaVersion:1,kind:'REAL_DEVICE_OCR_CORPUS',gameVersion:'6.0.0',cases:[]});
   assert.equal(missing.corpusStatus,'SEM_CORPUS_REAL');
+  const wrongPatch=evaluateOcrCorpusR571({...manifest,cases:[{...item,gameVersion:'7.0.0'}]},{rootDir:dir});
+  assert.ok(wrongPatch.structuralErrors.some(v=>/versão do jogo diverge/.test(v)));
+  const invalidLevel=evaluateOcrCorpusR571({...manifest,cases:[{...item,
+    expected:{...expected,level:-1}}]},{rootDir:dir});
+  assert.ok(invalidLevel.structuralErrors.some(v=>/rótulos críticos/.test(v)));
   const synthetic=evaluateOcrCorpusR571({...manifest,cases:[{...item,sourceKind:'SYNTHETIC_UNIT_TEST'}]},{rootDir:dir});
   assert.ok(synthetic.structuralErrors.some(v=>/print real/.test(v)));
   const traversed=evaluateOcrCorpusR571({...manifest,cases:[{...item,imagePath:'../outside.png'}]},{rootDir:dir});
