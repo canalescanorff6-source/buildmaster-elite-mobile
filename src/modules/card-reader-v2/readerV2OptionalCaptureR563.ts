@@ -1,5 +1,5 @@
 import { extractCanonicalSkillsFromText, normalizeSkillIdentity } from '../../lib/officialSkillIdentity';
-import { RECOGNIZABLE_IMPETO_NAMES } from '../../lib/officialImpetoCatalog';
+import { recognizeReaderOptionalBoostersR563 } from '../../lib/readerOptionalCatalogR563';
 import type { ReaderV2FieldEvidence } from './readerV2Types';
 
 export type ReaderV2OptionalCaptureR563 = {
@@ -7,7 +7,7 @@ export type ReaderV2OptionalCaptureR563 = {
  boosters: { candidates: string[]; status: 'PENDENTE'|'REVISAR'; reason: string };
 };
 export function normalizeReaderV2OptionalTextR563(value:string):string {
- return String(value??'').normalize('NFKC').replace(/[\u200B-\u200D\uFEFF\u0000-\u001F\u007F]/g,'').replace(/\r\n?/g,'\n').replace(/[^\S\n]+/g,' ').trim();
+ return String(value??'').normalize('NFKC').replace(/\r\n?/g,'\n').replace(/[\u200B-\u200D\uFEFF\u0000-\u0009\u000B-\u001F\u007F]/g,'').replace(/[^\S\n]+/g,' ').trim();
 }
 export function safeReaderV2NumericTokensR563(text:string):number[] {
  return normalizeReaderV2OptionalTextR563(text).split(/[\s,;]+/).filter(token=>/^\d{1,3}$/.test(token)).map(Number).filter(value=>value>=1&&value<=110);
@@ -45,7 +45,7 @@ export function inspectReaderV2OptionalFieldsR563(fields:ReaderV2FieldEvidence[]
  const booster=fields.find(f=>f.key==='impeto');
  const clean=(v:string)=>normalizeReaderV2OptionalTextR563(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
  const source=' '+clean(booster?.value??'')+' ';
- const found=booster&&!booster.error&&booster.confidence>=65?RECOGNIZABLE_IMPETO_NAMES.filter(n=>source.includes(' '+clean(n)+' ')):null;
+ const found = booster && !booster.error && booster.confidence >= 65 ? recognizeReaderOptionalBoostersR563(source) : null;
  return {
   additionalSkills:skillsOk?{candidates,status:'REVISAR',reason:'Conferir antes de salvar.'}:{candidates:[],status:'PENDENTE',reason:'Seção ausente ou não confiável.'},
   boosters:found&&found.length>0&&found.length<=2?{candidates:found,status:'REVISAR',reason:'Conferir slots e valores.'}:{candidates:[],status:'PENDENTE',reason:'Ímpeto não comprovado.'}
