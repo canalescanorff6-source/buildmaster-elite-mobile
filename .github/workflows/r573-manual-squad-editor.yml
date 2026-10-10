@@ -29,3 +29,5 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: node -r ./tests/_ts-require.cjs tests/r573-manual-squad-position-editor-regression.ts
+      - name: Validar TypeScript do aplicativo completo
+        run: npx --no-install tsc --noEmit
