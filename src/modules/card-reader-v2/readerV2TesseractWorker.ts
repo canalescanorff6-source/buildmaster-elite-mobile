@@ -19,6 +19,7 @@ function paramsForKey(key?: ReaderV2FieldKey): Partial<TesseractNamespace.Worker
   const retry = rawKey.endsWith('#retry');
   const normalized = retry ? rawKey.slice(0, -'#retry'.length) : rawKey;
   const numericColumn = normalized.startsWith('attributes-values-');
+  const additionalSkillZone = normalized === 'additionalSkills';
   const numeric = normalized === 'level' || normalized === 'points' || numericColumn;
   const singleLine = normalized === 'mainPosition' || normalized === 'playstyle' || (numeric && !numericColumn);
   const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÁÀÃÂÉÊÍÓÔÕÚÇáàãâéêíóôõúç '-.";
@@ -27,7 +28,9 @@ function paramsForKey(key?: ReaderV2FieldKey): Partial<TesseractNamespace.Worker
     tessedit_pageseg_mode: (retry ? '13' : numericColumn ? '6' : singleLine ? '7' : normalized === 'skills' ? '6' : '6') as TesseractNamespace.PSM,
     tessedit_char_whitelist: whitelist,
     preserve_interword_spaces: '1',
-    user_defined_dpi: retry ? (numeric ? '360' : '500') : singleLine && !numeric ? '450' : '300',
+    // R563: a manually calibrated additional-skill crop may contain multiple lines.
+    // Leave native-skill / booster presets unchanged to protect legacy cards.
+    user_defined_dpi: retry ? (numeric ? '360' : '500') : additionalSkillZone ? '360' : singleLine && !numeric ? '450' : '300',
     ...(numeric ? { classify_bln_numeric_mode: '1' } : {}),
   } as Partial<TesseractNamespace.WorkerParams>;
 }
