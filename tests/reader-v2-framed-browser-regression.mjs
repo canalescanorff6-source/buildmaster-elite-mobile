@@ -72,10 +72,11 @@ try{
   const expected={x:20+950*75/1400,y:60+1086*115/1600,w:950*260/1400*(validCalibration?.8:1),h:1086*355/1600};
   for(const key of ['x','y','w','h'])assert.ok(Math.abs(output.coverBox?.[key]*card.size[key==='x'||key==='w'?0:1]-expected[key])<3,'Foto deve resolver a geometria completa, mesmo quando a caixa antiga cabe no novo painel: '+key);
  }
- for(const mode of ['automatic','saved-calibration'])for(const card of cards){
+ for(const mode of ['automatic','saved-calibration'])for(const card of mode==='saved-calibration'?[...cards,{...cards[0],size:[1400,1664],panel:[0,64,1400,1600],smallTopBar:true}]:cards){
   const output=await page.evaluate(({encoded,card,mode})=>window.readFramed(encoded,card,mode),{encoded:fs.readFileSync('tests/fixtures/reader/'+card.file).toString('base64'),card,mode});
   console.log(JSON.stringify({card:card.name,mode,frame:output.frame,name:output.review.playerName,attributes:output.attributes,level:output.review.level,points:output.review.points,uncertain:output.review.uncertainKeys}));
   const [px,py,pw,ph]=card.panel;const [width,height]=card.size;
+  if(card.smallTopBar)for(const [key,value] of Object.entries({x:75,y:179,w:260,h:355}))assert.ok(Math.abs(output.coverBox?.[key]*card.size[key==='x'||key==='w'?0:1]-value)<5,'Foto deve seguir a carta mesmo com uma pequena barra superior: '+key);
   assert.ok(output.coverBox?.x*width>=px&&output.coverBox?.y*height>=py&&output.coverBox?.x*width<pw*.4+px&&output.coverBox?.y*height<ph*.3+py,'Foto deve ser recortada no painel da carta dentro da captura.');
   assert.equal(output.review.playerName.normalize('NFD').replace(/[\u0300-\u036f]/g,''),card.name.normalize('NFD').replace(/[\u0300-\u036f]/g,''),'Captura inteira deve ler o nome da carta, mesmo com cabeçalho do app.');
   assert.equal(Object.keys(output.attributes).length,26);

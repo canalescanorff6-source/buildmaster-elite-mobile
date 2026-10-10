@@ -82,7 +82,8 @@ export function resolveReaderV2FrameZones(zones:ReaderV2Zone[],frame?:ReaderV2Fr
  });
  const rowsFit=Math.abs(attributes.y-(frame.y+frame.h*555/1600))<=frame.h*.04
   &&Math.abs(attributes.y+attributes.h-(frame.y+frame.h*1085/1600))<=frame.h*.04;
- if(columnsFit&&rowsFit)return zones;
+ const profileFits=zones.every(z=>!z.enabled||z.x>=frame.x-.005&&z.y>=frame.y-.005&&z.x+z.w<=frame.x+frame.w+.005&&z.y+z.h<=frame.y+frame.h+.005);
+ if(columnsFit&&rowsFit&&profileFits)return zones;
  return zones.map(zone=>{
   const standard=READER_V2_DEFAULT_ZONES.find(candidate=>candidate.key===zone.key);
   return standard?{...mapReaderV2ZoneToFrame(standard,frame),label:zone.label,enabled:zone.enabled}:zone;
