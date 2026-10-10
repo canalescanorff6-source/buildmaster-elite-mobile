@@ -89,5 +89,6 @@ assert.match(component,/inventoryConfirmed/);
 assert.match(component,/costConfirmed/);
 assert.match(component,/skillCostConfirmed/);
 assert.match(component,/craftingSelectionConfirmed/);
-assert.match(target,/<SkillBoosterPlanningPanelR567 result=\{result\}/);
+assert.match(target,/<SkillBoosterPlanningPanelR567/);
+assert.match(target,/key=\{cardIdentityFingerprintR126/,'New card evidence must remount the local planner.');
 console.log('R567 GREEN — slot safety, duplicate guards, tokens, verified cost and UI');
