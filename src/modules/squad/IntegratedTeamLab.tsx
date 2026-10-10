@@ -11,7 +11,6 @@ import {
   Gamepad2,
   History,
   Layers,
-  Link2,
   Save,
   ShieldCheck,
   Sparkles,
@@ -148,7 +147,7 @@ function ManagerLinksPanelR561({ manager, links, squadComplete, lineupConfirmed,
   return (
     <section className="luxury-panel bm-r561-manager-links" aria-label="Vínculos táticos do técnico" style={{ marginTop: 14, marginBottom: 14, padding: 16, minWidth: 0 }}>
       <header style={{ display: 'flex', alignItems: 'center', gap: 11, flexWrap: 'wrap', marginBottom: 10 }}>
-        <Link2 size={21} aria-hidden="true" />
+        <Target size={21} aria-hidden="true" />
         <div style={{ flex: '1 1 190px', minWidth: 0 }}>
           <strong style={{ display: 'block' }}>Vínculos táticos do técnico</strong>
           <small style={{ display: 'block', opacity: .82 }}>{manager?.name ?? 'Nenhum técnico específico selecionado'}</small>
