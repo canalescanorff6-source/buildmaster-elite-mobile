@@ -99,19 +99,21 @@ export function buildManualFormationLineupR573(
   const reserved=new Set(Object.values(manualAssignments).filter((s):s is string=>typeof s==='string'&&results.has(s)));
   const used=new Set<string>();
   const auto=buildFormationLineup([...players],blueprint,style);
+  const placed:FormationSlotFit[]=[];
+  const append=(fit:FormationSlotFit)=>{placed.push(fit);return fit};
   return blueprint.slots.map((sourceSlot,index)=>{
     const role=layout.positionOverrides[sourceSlot.id];
     const slot=role && (role===sourceSlot.position||sourceSlot.alternatives.includes(role))
       ?{...sourceSlot,position:role,label:role===sourceSlot.position?sourceSlot.label:sourceSlot.label+' • '+role}:sourceSlot;
     const hasPin=owns(manualAssignments,slot.id);
     const pin=manualAssignments[slot.id];
-    if(hasPin && pin===null)return emptyFit(slot);
-    const partners=auto.slice(0,index).flatMap(f=>f.player?[f.player]:[]);
+    if(hasPin && pin===null)return append(emptyFit(slot));
+    const partners=placed.flatMap(f=>f.player?[f.player]:[]);
     const manual=typeof pin==='string'?results.get(pin):undefined;
     if(manual&&!used.has(pin!)){
       used.add(pin!);
       const fit=scorePlayerForFormationSlot(manual,slot,{formationId:blueprint.id,teamStyle:style,partnerResults:partners});
-      return {...fit,warnings:[...fit.warnings,...(fit.score<48?['Atribuição manual fora do encaixe recomendado; confira o efeito dentro do jogo.']:[])]};
+      return append({...fit,warnings:[...fit.warnings,...(fit.score<48?['Atribuição manual fora do encaixe recomendado; confira o efeito dentro do jogo.']:[])]});
     }
     // Locked player can't be duplicated by automatic selection.
     const autoPick=auto[index]?.player;
@@ -123,9 +125,9 @@ export function buildManualFormationLineupR573(
       formationId:blueprint.id,teamStyle:style,partnerResults:partners,
     })).sort((a,b)=>b.score-a.score);
     const best=ranked[0];
-    if(!best||best.score<48)return emptyFit(slot);
+    if(!best||best.score<48)return append(emptyFit(slot));
     used.add(cardIdentityFingerprintR126(best.player!.parsed));
-    return best;
+    return append(best);
   });
 }
 /** New player assignment swaps with a previously occupied slot when necessary. */
