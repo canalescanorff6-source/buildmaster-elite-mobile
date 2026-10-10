@@ -12,20 +12,24 @@ function count(value:string): number|null {
 
 export function SkillBoosterPlanningPanelR567({result}:{result:AnalysisResult}) {
   const [skills,setSkills]=useState('');
+  const [skillCost,setSkillCost]=useState('');
   const [boosters,setBoosters]=useState('');
   const [boosterCost,setBoosterCost]=useState('');
   const [inventoryConfirmed,setInventoryConfirmed]=useState(false);
   const [costConfirmed,setCostConfirmed]=useState(false);
+  const [skillCostConfirmed,setSkillCostConfirmed]=useState(false);
   const plan=useMemo(()=>planSkillBoosterIntelligenceR567({
     card:result.parsed,
     recommendedSkills:result.skillRecommendations ?? [],
     recommendedImpetos:result.recommendedImpetos ?? [],
     skillTokens:count(skills),
+    skillCostTokens:count(skillCost),
+    skillCostConfirmed,
     boosterTokens:count(boosters),
     boosterCostTokens:count(boosterCost),
     inventoryConfirmed,
     costConfirmed
-  }),[result,skills,boosters,boosterCost,inventoryConfirmed,costConfirmed]);
+  }),[result,skills,skillCost,skillCostConfirmed,boosters,boosterCost,inventoryConfirmed,costConfirmed]);
 
   return (
     <details className="luxury-panel" style={{marginBlock:12,padding:14}}>
@@ -39,6 +43,10 @@ export function SkillBoosterPlanningPanelR567({result}:{result:AnalysisResult}) 
           <input aria-label="Quantidade de tokens de habilidade" inputMode="numeric" type="number" min={0}
             value={skills} onChange={event=>{setSkills(event.target.value);setInventoryConfirmed(false);}}/>
         </label>
+        <label>Tokens necessários por habilidade selecionada
+          <input aria-label="Custo da habilidade confirmado no jogo" inputMode="numeric" type="number" min={1}
+            value={skillCost} onChange={event=>{setSkillCost(event.target.value);setSkillCostConfirmed(false);}}/>
+        </label>
         <label>Tokens de ímpeto disponíveis
           <input aria-label="Quantidade de tokens de ímpeto" inputMode="numeric" type="number" min={0}
             value={boosters} onChange={event=>{setBoosters(event.target.value);setInventoryConfirmed(false);}}/>
@@ -50,6 +58,10 @@ export function SkillBoosterPlanningPanelR567({result}:{result:AnalysisResult}) 
         <label><input type="checkbox" checked={inventoryConfirmed}
           onChange={event=>setInventoryConfirmed(event.target.checked)}/>
           Conferi as duas quantidades de tokens no jogo.
+        </label>
+        <label><input type="checkbox" checked={skillCostConfirmed}
+          onChange={event=>setSkillCostConfirmed(event.target.checked)}/>
+          Conferi o custo da seleção de habilidade no jogo.
         </label>
         <label><input type="checkbox" checked={costConfirmed}
           onChange={event=>setCostConfirmed(event.target.checked)}/>
