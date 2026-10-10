@@ -125,7 +125,9 @@ export function auditCardBuildR564(input: CardAuditInputR564): CardAuditR564 {
     pointsRemaining: validBudget && pointsUsed !== null ? budget! - pointsUsed : null,
     exactBudget,
     optimizationAllowed: !blocked && exactBudget && input.budgetProvenance === 'MANUAL_CONFIRMED'
+      && input.baseProvenance === 'PRE_MANAGER_CONFIRMED'
       && actualAttributeCount === 26
+      && Object.keys(input.card.attributes).every(key => confirmedBase.has(key as AttributeKey))
       && !issues.some(issue => issue.code === 'EVIDENCIA_INCERTA'),
     managerProjectionEligible,
     issues,
