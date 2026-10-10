@@ -46,7 +46,7 @@ assert.match(snapshot,/R\. Rodríguez/);
 assert.match(snapshot,/Escalação: PENDENTE/);
 assert.match(snapshot,/Habilidades adicionais \[5\]/);
 assert.match(snapshot,/Passe de primeira \[CONFIRMADO\]/);
-assert.match(snapshot,/Toque duplo/,{message:'Legacy skill should not be silently presented as owned when explicit source exists'});
+assert.doesNotMatch(snapshot,/Toque duplo/,'Explicit slot evidence must override legacy array values');
 assert.match(snapshot,/PENDENTE — bônus não somado ao print/);
 assert.equal(JSON.stringify(card),before,'Snapshot never mutates vault card.');
 const noManager=buildTacticalSnapshotR562({team,teamStyle:'POSSE_DE_BOLA',selectedManager:null,players:[record],lineupConfirmed:false});
