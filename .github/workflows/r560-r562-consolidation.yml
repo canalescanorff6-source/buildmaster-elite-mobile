@@ -1,0 +1,32 @@
+name: R560–R562 — Consolidação tática
+on:
+  pull_request:
+    paths:
+      - 'src/lib/managerLinkEngineR560.ts'
+      - 'src/lib/cardVisualEvidenceR561.ts'
+      - 'src/lib/tacticalSnapshotR562.ts'
+      - 'src/lib/managers.ts'
+      - 'src/lib/analyzerDomain.ts'
+      - 'src/components/CardVisionApp.tsx'
+      - 'src/modules/squad/IntegratedTeamLab.tsx'
+      - 'src/modules/players/PlayerLaboratory.tsx'
+      - 'tests/r560-r562-consolidation-regression.ts'
+      - '.github/workflows/r560-r562-consolidation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/lib/tacticalSnapshotR562.ts'
+      - 'tests/r560-r562-consolidation-regression.ts'
+jobs:
+  regression:
+    name: Evidência, vínculos e snapshot sem API
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: node -r ./tests/_ts-require.cjs tests/r560-r562-consolidation-regression.ts
