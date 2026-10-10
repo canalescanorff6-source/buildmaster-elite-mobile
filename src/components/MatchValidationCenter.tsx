@@ -5,6 +5,7 @@ import { Activity, CheckCircle2, History, Save, Target, Trash2 } from 'lucide-re
 import { RealValidationV3760Panel } from '@/components/RealValidationV3760Panel';
 import { RealGameplayValidationV4050Panel } from '@/components/RealGameplayValidationV4050Panel';
 import { LongitudinalGameplayV4060Panel } from '@/components/LongitudinalGameplayV4060Panel';
+import { MatchEvidenceLabR568 } from '@/components/MatchEvidenceLabR568';
 import type { AnalysisResult } from '@/lib/analyzer';
 import {
   MATCH_PROBLEM_TAGS,
@@ -213,6 +214,7 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
 
   return <div className="result-section-grid match-validation-center">
     <LongitudinalGameplayV4060Panel analysis={longitudinalValidation} />
+    <MatchEvidenceLabR568 records={currentRecords} />
     <RealGameplayValidationV4050Panel analysis={gameplayValidation} />
     <RealValidationV3760Panel analysis={realValidation} />
     <article className="luxury-panel wide-card">
