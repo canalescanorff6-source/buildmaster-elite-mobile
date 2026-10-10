@@ -1,0 +1,28 @@
+name: R567 — Habilidades e Ímpetos seguros
+on:
+  pull_request:
+    paths:
+      - 'src/lib/skillBoosterIntelligenceR567.ts'
+      - 'src/components/result/SkillBoosterPlanningPanelR567.tsx'
+      - 'src/components/result/ResultEvidencePanelR561.tsx'
+      - 'tests/r567-skill-booster-intelligence-regression.ts'
+      - '.github/workflows/r567-skill-booster-intelligence.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/lib/skillBoosterIntelligenceR567.ts'
+      - 'tests/r567-skill-booster-intelligence-regression.ts'
+jobs:
+  r567:
+    name: Evidência de vagas e custo de tokens
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Regressão R567
+        run: node -r ./tests/_ts-require.cjs tests/r567-skill-booster-intelligence-regression.ts
