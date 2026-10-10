@@ -6,7 +6,7 @@ const fields=[
  {key:'skills',label:'Habilidades',source:'zones' as const,value:'Passe de primeira\nHabilidades Adicionais:\nToque duplo',confidence:95},
  {key:'impeto',label:'Ímpeto',source:'zones' as const,value:'Instinto artilheiro +4',confidence:90},
 ];
-assert.deepEqual(deriveReaderCanonicalEvidenceR549(fields).skillValues,['Passe de primeira']);
+assert.deepEqual(deriveReaderCanonicalEvidenceR549(fields).skillValues,['Passe de primeira','Toque duplo']);
 const extra=inspectReaderV2OptionalFieldsR563(fields);
 assert.equal(extra.additionalSkills.status,'REVISAR');
 assert.deepEqual(extra.additionalSkills.candidates,['Toque duplo']);
