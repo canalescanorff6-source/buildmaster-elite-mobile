@@ -1,4 +1,4 @@
-import type { ParsedCard, TrainingPlan } from './analyzerDomain';
+import type { TrainingPlan } from './analyzerDomain';
 import { auditCardBuildR564, type BaseProvenanceR564 } from './cardPerformanceAuditR564';
 
 /**
@@ -67,7 +67,7 @@ export function comparePerformanceBuildsR565(input: {
       spent: audit.pointsUsed,
       remaining: audit.pointsRemaining,
       issues,
-      modelScore: Number.isFinite(candidate.modelScore) ? (candidate.modelScore ?? null) : null,
+      modelScore: candidate.modelScore != null && Number.isFinite(candidate.modelScore) ? candidate.modelScore : null,
     };
   });
   const valid = candidates.filter(candidate => candidate.status === 'VALIDO');
