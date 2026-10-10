@@ -1,5 +1,3 @@
-// R142 — núcleo de posição/atributos extraído do analyzer monolítico.
-// Não escreve ficha, Top 5 ou Ímpeto: somente calcula evidência/score funcional.
 import { normalize } from '../analysis/analyzerTextUtilsR130';
 import { BASE_BY_POSITION, SKILL_PROFILES } from '../analysis/analyzerCatalog';
 import type { Attributes, ParsedCard, PositionCode, PositionRatings } from '../../lib/analyzerDomain';
@@ -41,7 +39,6 @@ export function preferredPositionsByPlaystyle(playstyle?: string | null): Positi
 }
 
 export function midfieldPriority(mainPosition: PositionCode, style: string): PositionCode[] {
-  // MLG/VOL/MAT/ME/MD podem vir com vários estilos. O estilo orienta a função, mas a posição da carta continua forte.
   if (/destruidor|destroyer/.test(style)) {
     if (mainPosition === 'CB') return ['CB', 'DMF', 'CMF'];
     if (mainPosition === 'CMF') return ['CMF', 'DMF', 'CB'];
@@ -160,11 +157,6 @@ export function gameplayPositionWeight(position: PositionCode, mainPosition: Pos
 export function fillAttributes(parsed: Pick<ParsedCard, 'mainPosition' | 'maxOverall' | 'overall' | 'attributes'>): Required<Attributes> {
   const base = BASE_BY_POSITION[parsed.mainPosition];
 
-  // Regra canônica v39.20: GER/Overall é somente metadado visual da carta.
-  // Ele nunca pode preencher, aumentar ou diminuir atributos ausentes, porque
-  // pequenas variações do OCR criariam fichas, habilidades e Ímpetos diferentes
-  // para a mesma versão. A base determinística da posição cobre apenas campos
-  // realmente ausentes; todo atributo lido continua soberano.
   const deterministicBase = Object.fromEntries(
     Object.entries(base).map(([key, value]) => [key, clamp(Number(value))])
   ) as Required<Attributes>;
@@ -186,7 +178,6 @@ export function playstylePositionBonus(position: PositionCode, playstyle?: strin
   const style = normalize(playstyle ?? '').toLowerCase();
   if (!style) return 0;
 
-  // O motor local não pode jogar um centroavante de área para PE só porque o OCR confundiu a grade.
   if (/homem de area|atacante matador|pivo|target man|fox/.test(style)) {
     if (position === 'CF') return 26;
     if (position === 'SS') return 10;
@@ -242,9 +233,6 @@ export function preferredPositionFromPlaystyle(playstyle: string | null | undefi
   const hasGoodRating = (code: PositionCode) => Number(ratings[code] ?? 0) >= 75;
   const rating = (code: PositionCode) => Number(ratings[code] ?? 0);
 
-  // Esta função só é usada quando o OCR não conseguiu ler claramente a posição grande da carta.
-  // Por isso ela prefere FUNÇÃO REAL antes do maior overall da grade. Ex.: Gattuso/Tchouaméni
-  // podem ter CB/LE com nota maior, mas DMF/VOL continua sendo a função principal de gameplay.
   if (/homem de area|atacante matador|pivo|target man|fox|artilheiro|goal poacher|puxa marcacao|puxa marcação/.test(style)) return 'CF';
 
   if (/destruidor|destroyer/.test(style)) {
@@ -330,7 +318,6 @@ export function positionScore(position: PositionCode, a: Required<Attributes>, s
     GK: avg(a.goalkeeperAwareness, a.goalkeeperCatching, a.goalkeeperParrying, a.goalkeeperReflexes, a.goalkeeperReach, a.jump) + skillBonus(['Liderança', 'Espírito guerreiro'])
   };
   const cardRating = positionRatings[position];
-  // GER por posição é apenas desempate leve. O ranking principal vem de atributos + função.
   const ratingBlend = cardRating ? (scores[position] * 0.88 + cardRating * 0.12) : scores[position];
   return clampDecimal(ratingBlend, 1, 100);
 }
@@ -400,8 +387,6 @@ export function detectMainPosition(positions: PositionCode[], positionRatings: P
 
   const bestRating = validRatings[0]?.[1] ?? 0;
 
-  // Se a função real indica uma posição e ela aparece com nota plausível, usamos ela antes do maior overall.
-  // Isso impede casos como DMF/VOL destruidor ir para LE/ZAG só porque a grade deu rating maior.
   if (preferred) {
     const preferredRating = Number(positionRatings[preferred] ?? 0);
     if (!positions.length || positions.includes(preferred) || preferredRating >= 70) {
