@@ -1,6 +1,7 @@
 import { canonicalizeOffensivePlaystyleR124 } from '../../lib/efootball2027PhaseCatalogR124';
 import { ATTRIBUTE_INPUTS, type PositionCode } from '../../lib/analyzerDomain';
 import { deriveReaderCanonicalEvidenceR549 } from '../../lib/readerCanonicalEvidenceR549';
+import { inspectReaderV2OptionalFieldsR563, splitReaderV2SkillsR563 } from './readerV2OptionalCaptureR563';
 import { extractCanonicalSkillsFromText } from '../../lib/officialSkillIdentity';
 import { parseAttributes } from '../analysis/cardEvidenceParserR130';
 import type {
@@ -62,10 +63,29 @@ export function readerV2ReviewRawText(draft: ReaderV2ReviewDraft, confirmed?: {a
   })) : readerV2ReviewAttributes(draft);
   const canonical = deriveReaderCanonicalEvidenceR549(draft.fields);
   const skills = confirmed ? confirmed.nativeSkills : canonical.skillValues;
-  const source = confirmed ? draft.rawText.split(/\r?\n/).filter(line =>
+  // Strip ONLY optional regions from the analyzer text. Preserve every other
+  // raw OCR line and manual correction, including unsupported legacy labels.
+  let sanitizedSource = draft.rawText;
+  for (const field of draft.fields) {
+    if (field.key === 'impeto' && typeof field.confidence === 'number' && draft.optionalCaptureR563?.boosters.status === 'PENDENTE') {
+      const raw = field.rawText ?? field.value;
+      if (raw) sanitizedSource = sanitizedSource.replace(raw, '');
+      continue;
+    }
+    if (field.key === 'additionalSkills') {
+      const raw = field.rawText ?? field.value;
+      if (raw) sanitizedSource = sanitizedSource.replace(raw, '');
+      continue;
+    }
+    if (field.key !== 'skills') continue;
+    const raw = field.rawText ?? field.value;
+    const split = splitReaderV2SkillsR563(raw);
+    if (split.explicitlyLabeled) sanitizedSource = sanitizedSource.replace(raw, split.native);
+  }
+  const source = confirmed ? sanitizedSource.split(/\r?\n/).filter(line =>
     !Object.keys(parseAttributes(line)).length && !extractCanonicalSkillsFromText(line).length
     && !/^\s*(?:habilidades\b.*|\d{1,3})\s*$/i.test(line)
-  ).join('\n') : draft.rawText;
+  ).join('\n') : sanitizedSource;
   const style = fieldValue({fields:draft.fields} as ReaderV2Evidence, 'playstyle');
   return [
     draft.playerName ? `NOME DO JOGADOR: ${draft.playerName}` : '',
@@ -77,7 +97,7 @@ export function readerV2ReviewRawText(draft: ReaderV2ReviewDraft, confirmed?: {a
     style ? `ESTILO DE JOGO OFENSIVO: ${style}` : '',
     skills?.length ? `HABILIDADES JÁ POSSUI: ${skills.join('; ')}` : '',
     canonical.specialSkillValues?.length ? `HABILIDADES ESPECIAIS: ${canonical.specialSkillValues.join('; ')}` : '',
-    ...(canonical.activeImpetos??[]).map(item=>`ÍMPETO: ${item.name}${item.value===null?'':` +${item.value}`}`),
+    ...(draft.optionalCaptureR563?.boosters.status === 'PENDENTE' && typeof draft.fields.find(field => field.key === 'impeto')?.confidence === 'number' ? [] : canonical.activeImpetos??[]).map(item=>`ÍMPETO: ${item.name}${item.value===null?'':` +${item.value}`}`),
     ...ATTRIBUTE_INPUTS.flatMap(item => attributes[item.key] ? [`${item.label}: ${attributes[item.key]}`] : []),
     source.trim(),
   ].filter(Boolean).join('\n');
@@ -138,6 +158,7 @@ export function buildReaderV2ReviewDraft(
   const labeledPosition = fields.map(field => normalizedText(field.value).match(/posicao (?:principal|da carta)\s*[:=-]\s*([a-z]{2,3})\b/)?.[1]).find(Boolean) ?? '';
   const mainPosition = normalizeReaderV2Position(fieldValue(evidence, 'mainPosition')) ?? normalizeReaderV2Position(labeledPosition) ?? '';
   const canonical = deriveReaderCanonicalEvidenceR549(fields);
+  const optionalCaptureR563 = inspectReaderV2OptionalFieldsR563(fields);
   canonical.uncertainKeys.forEach(key => addUncertain(uncertainKeys,key));
   if (level && points && Number(points) !== (Number(level)-1)*2) {addUncertain(uncertainKeys,'level');addUncertain(uncertainKeys,'points');}
 
@@ -158,6 +179,7 @@ export function buildReaderV2ReviewDraft(
     attributeValues: evidence.attributeValues ? [...evidence.attributeValues] : undefined,
     attributeRows: evidence.attributeRows ? [...evidence.attributeRows] : undefined,
     skillValues: canonical.skillValues,
+    optionalCaptureR563,
     impetoName: canonical.impetoName,
     impetoNames: canonical.impetoNames,
     specialSkillValues: canonical.specialSkillValues,
