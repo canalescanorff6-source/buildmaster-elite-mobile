@@ -28,6 +28,7 @@ import { buildSquadBrainR481 } from '@/modules/squad-brain/squadBrainEngineR481'
 import { buildChemistryGraphR484 } from '@/modules/chemistry/chemistryGraphEngineR484';
 import { buildAutonomousTacticalDirectorR500 } from '@/modules/tactical-director/tacticalDirectorEngineR500';
 import { TacticalDirectorPanelR500 } from '@/modules/tactical-director/TacticalDirectorPanelR500';
+import { buildFluidTacticalAuditR566 } from '@/lib/fluidTacticalDnaR566';
 import {
   RotationExplainabilityR489,
   StarterExplainabilityR489,
@@ -71,10 +72,22 @@ export function IntegratedTeamLab({ team, players, records, teamStyle, onOpenFor
   const [gameMode, setGameMode] = useState(false);
   const [savedNotice, setSavedNotice] = useState('');
   const [comparisonFormation, setComparisonFormation] = useState<TacticalFormation>('4-3-3');
+  const [defenseFormationR566, setDefenseFormationR566] = useState<TacticalFormation>('4-4-2');
+  const [defenseMappingR566, setDefenseMappingR566] = useState<Record<string, string>>({});
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const detailRef = useRef<HTMLDivElement | null>(null);
   const comparisonTeam = useMemo(() => buildTeamDiagnosis(players, comparisonFormation, teamStyle), [players, comparisonFormation, teamStyle]);
   const formationOptions = useMemo(() => FORMATION_BLUEPRINTS.map((item) => item.id as TacticalFormation), []);
+  const defenseSlotsR566 = useMemo(
+    () => FORMATION_BLUEPRINTS.find(item => item.id === defenseFormationR566)?.slots ?? [],
+    [defenseFormationR566]
+  );
+  const fluidAuditR566 = useMemo(() => buildFluidTacticalAuditR566({
+    team,
+    teamStyle,
+    defenseFormation: defenseFormationR566,
+    defenseSlotByAttackSlot: defenseMappingR566,
+  }), [team, teamStyle, defenseFormationR566, defenseMappingR566]);
   const playerByName = useMemo(() => new Map(players.map((player) => [player.name, player])), [players]);
   const starterIds = useMemo(() => new Set(team.lineup.map((item) => item.player?.parsed.playerName).filter(Boolean)), [team.lineup]);
   const reservePlayers = useMemo(() => players.filter((player) => !starterIds.has(player.name)).slice(0, 5), [players, starterIds]);
@@ -267,6 +280,46 @@ export function IntegratedTeamLab({ team, players, records, teamStyle, onOpenFor
           <header><Target size={19}/><div><strong>Estilo coletivo</strong><small>{team.styleFit}% de encaixe</small></div></header>
           <p>{team.styleNote}</p>
           <div className="v27-pairing-list">{team.pairingNotes.map((note) => <span key={note}><CheckCircle2 size={15}/>{note}</span>)}</div>
+        </article>
+
+        <article className="luxury-panel" aria-label="DNA Tático Fluido R566">
+          <header><Layers size={19}/><div><strong>DNA Tático Fluido R566</strong><small>Ataque ${team.formation} → Defesa ${defenseFormationR566} • somente leitura</small></div></header>
+          <p>Simulação por fase: confirma a posição defensiva de cada titular antes de avaliar estilos. Não altera a formação do jogo nem as cartas.</p>
+          <label>Formação sem a bola
+            <select value={defenseFormationR566} onChange={event => {
+              setDefenseFormationR566(event.target.value as TacticalFormation);
+              setDefenseMappingR566({});
+            }}>
+              {formationOptions.map(option => <option key={option} value={option}>{option}</option>)}
+            </select>
+          </label>
+          <div className="v27-pairing-list">
+            <span><ShieldCheck size={15}/>Mapeados: {fluidAuditR566.assigned}/{fluidAuditR566.required} • {fluidAuditR566.status}</span>
+            {fluidAuditR566.warnings.slice(0, 4).map((warning, index) => <span key={index}><AlertTriangle size={15}/>{warning}</span>)}
+          </div>
+          <details>
+            <summary style={{ cursor: 'pointer', fontWeight: 700 }}>Mapear os jogadores sem a bola e verificar ativação</summary>
+            <div className="v27-pairing-list">
+              {fluidAuditR566.players.map(item => (
+                <label key={item.attackSlot} style={{ display: 'block' }}>
+                  <strong>{item.player ?? 'Espaço vazio'} — {item.attackPosition}</strong>
+                  <select aria-label={`Posição defensiva de ${item.player ?? item.attackSlot}`}
+                    value={defenseMappingR566[item.attackSlot] ?? ''}
+                    onChange={event => setDefenseMappingR566(current => ({
+                      ...current, [item.attackSlot]: event.target.value
+                    }))}>
+                    <option value="">Defesa: selecionar manualmente</option>
+                    {defenseSlotsR566.map(slot => (
+                      <option key={slot.id} value={slot.id}>{slot.label} ({slot.position})</option>
+                    ))}
+                  </select>
+                  <small>Ataque: {item.offensiveStyle ?? 'PENDENTE'} [{item.offense}] • Defesa: {item.defensiveStyle ?? 'PENDENTE'} [{item.defense}]</small>
+                  {item.notes.map((note, i) => <small key={i}>• {note}</small>)}
+                </label>
+              ))}
+            </div>
+          </details>
+          <small>Compatibilidade de catálogo não garante ativação dentro de uma partida. Mapeamento fica somente nesta tela e não altera a escalação.</small>
         </article>
         <article className="luxury-panel bm32-formation-compare">
           <header><Layers size={19}/><div><strong>Comparar formações</strong><small>{team.formation} x {comparisonFormation}</small></div></header>
