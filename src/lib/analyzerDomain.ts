@@ -125,6 +125,26 @@ export type Impetus = {
   active?: boolean;
 };
 
+/** R560: metadados opcionais de progressão. Campos legados continuam sendo a autoridade
+ * até que a leitura ou o usuário confirme cada slot individualmente. */
+export type ProgressionEvidenceR560 = 'OCR' | 'MANUAL' | 'CATALOGO_VERIFICADO';
+export type AdditionalSkillSlotR560 = {
+  slot: 1 | 2 | 3 | 4 | 5;
+  skill: string | null;
+  source?: ProgressionEvidenceR560;
+};
+export type PositionTrainingSlotR560 = {
+  position: PositionCode;
+  status: 'CONFIRMADO' | 'PENDENTE';
+  source?: ProgressionEvidenceR560;
+};
+export type BoosterSlotsR560 = {
+  primary: Impetus | null;
+  secondary: Impetus | null;
+  secondaryStatus: 'DISPONIVEL' | 'OCUPADO' | 'SEM_VAGA' | 'NAO_CONFIRMADO';
+  source?: ProgressionEvidenceR560;
+};
+
 export type ImpetoRecommendation = {
   name: string;
   tier: 'ideal' | 'alternativo' | 'evitar';
@@ -256,6 +276,12 @@ export type ParsedCard = {
   impetos: Impetus[];
   nativeSkills: string[];
   additionalSkills?: string[];
+  /** Slots explícitos quando lidos/confirmados; não substituir additionalSkills por inferência. */
+  additionalSkillSlotsR560?: AdditionalSkillSlotR560[];
+  /** Treinamentos de posição realmente observados; não presumir proficiência por token. */
+  positionTrainingSlotsR560?: PositionTrainingSlotR560[];
+  /** Estado primário/secundário dos ímpetos, independente dos ímpetos legados. */
+  boosterSlotsR560?: BoosterSlotsR560;
   specialSkills: string[];
   attributes: Attributes;
   physicalProfile: PhysicalProfile;
