@@ -25,6 +25,7 @@ Estrutura mínima, **apenas modelo a preencher com valores reais**:
 {
   "schemaVersion": 1,
   "kind": "REAL_DEVICE_OCR_CORPUS",
+  "gameVersion": "6.0.0",
   "sourceSha": "COLE_O_SOURCE_SHA_REAL_DE_40_HEX",
   "apkSha256": "COLE_O_SHA256_REAL_DO_APK_DE_64_HEX",
   "cases": []
@@ -41,6 +42,7 @@ Para cada print adicione um registro em `cases`:
   "imagePath": "screens/print-real-001.png",
   "imageSha256": "SHA256_REAL_DO_ARQUIVO",
   "mode": "automatic",
+  "gameVersion": "6.0.0",
   "deviceModel": "MODELO_REAL_TESTADO",
   "resolution": "2400x1080",
   "cardType": "TIPO_REAL_DA_CARTA",
@@ -66,6 +68,8 @@ Para cada print adicione um registro em `cases`:
 ```
 
 **Os números acima são marcadores ilustrativos, não leituras verdadeiras.** Substitua todos por dados realmente conferidos. Para print que não exibe skills ou ímpetos, omita esses dois arrays em `expected` e `observed`, em vez de registrar a ausência como se fosse um campo visível. Se ocorreu crash, use `outcome: "crash"`; mantenha o caso mesmo quando `observed` estiver vazio. Modos de falha: `crash`, `timeout`, `worker_error`.
+
+Preencha `gameVersion` com a versão **real** do eFootball em cada captura e no topo do manifesto. Não misture prints de patches diferentes no mesmo resultado. O valor `6.0.0` é apenas exemplo.
 
 Cada `imageSha256` deve ser calculado do **arquivo original**. No Linux, macOS ou Git Bash: `sha256sum .local/ocr-real/screens/print-real-001.png`. Para o APK, obtenha o hash da release no GitHub Actions e confira os mesmos bytes do APK instalado. Também anote o `sourceSha` da release; resultados de APKs distintos nunca devem ser misturados.
 
