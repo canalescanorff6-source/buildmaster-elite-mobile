@@ -34,6 +34,8 @@ import { buildChemistryGraphR484 } from '@/modules/chemistry/chemistryGraphEngin
 import { buildAutonomousTacticalDirectorR500 } from '@/modules/tactical-director/tacticalDirectorEngineR500';
 import { TacticalDirectorPanelR500 } from '@/modules/tactical-director/TacticalDirectorPanelR500';
 import { buildFluidTacticalAuditR566 } from '@/lib/fluidTacticalDnaR566';
+import type { ManualTeamLayoutR573 } from '@/lib/manualTeamEditorR573';
+import { ManualPitchEditorR573 } from './ManualPitchEditorR573';
 import {
   RotationExplainabilityR489,
   StarterExplainabilityR489,
@@ -45,6 +47,8 @@ type TeamTab = 'escalacao' | 'elenco' | 'tatica' | 'banco';
 type Props = {
   team: TeamDiagnosis;
   selectedFormation: TacticalFormation;
+  manualLayout: ManualTeamLayoutR573 | null;
+  onManualLayoutChange: (next:ManualTeamLayoutR573 | null)=>void;
   players: IntegratedPlayerRecord[];
   records: MatchValidationRecord[];
   teamStyle: TacticalStyle;
@@ -74,7 +78,7 @@ function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toLocaleUpperCase('pt-BR')).join('') || '?';
 }
 
-export function IntegratedTeamLab({ team, selectedFormation, players, records, teamStyle, selectedManager, onOpenFormationLab, onPrepareMatch, onFormationChange }: Props) {
+export function IntegratedTeamLab({ team, selectedFormation, manualLayout, onManualLayoutChange, players, records, teamStyle, selectedManager, onOpenFormationLab, onPrepareMatch, onFormationChange }: Props) {
   const [tab, setTab] = useState<TeamTab>('escalacao');
   const [gameMode, setGameMode] = useState(false);
   const [savedNotice, setSavedNotice] = useState('');
@@ -145,7 +149,7 @@ export function IntegratedTeamLab({ team, selectedFormation, players, records, t
   }
 
   function saveTeamPreset() {
-    upsertPersonalPreset({ name: `${team.formation} • ${new Date().toLocaleDateString('pt-BR')}`, category: 'time', payload: { formation: team.formation, globalScore: team.globalScore, lineup: team.lineup.map((item) => ({ slot: item.slot.id, player: item.player?.parsed.playerName ?? null })) } });
+    upsertPersonalPreset({ name: `${team.formation} • ${new Date().toLocaleDateString('pt-BR')}`, category: 'time', payload: { formation: team.formation, manualLayout, globalScore: team.globalScore, lineup: team.lineup.map((item) => ({ slot: item.slot.id, player: item.player?.parsed.playerName ?? null })) } });
     setSavedNotice('Preset salvo na Biblioteca pessoal.');
     window.setTimeout(() => setSavedNotice(''), 2500);
   }
@@ -168,7 +172,7 @@ export function IntegratedTeamLab({ team, selectedFormation, players, records, t
   }
 
   function exportTeam() {
-    const payload = { kind: 'buildmaster-team', version: 1, formation: team.formation, teamStyle, exportedAt: new Date().toISOString(), lineup: team.lineup.map((item) => ({ slot: item.slot.id, label: item.slot.label, player: item.player?.parsed.playerName ?? null, score: item.score })) };
+    const payload = { kind: 'buildmaster-team', version: 2, formation: team.formation, teamStyle, manualLayout, exportedAt: new Date().toISOString(), lineup: team.lineup.map((item) => ({ slot: item.slot.id, label: item.slot.label, player: item.player?.parsed.playerName ?? null, score: item.score })) };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -243,25 +247,8 @@ export function IntegratedTeamLab({ team, selectedFormation, players, records, t
 
       <TacticalDirectorPanelR500 plan={tacticalDirectorR500} compact />
 
-      <section className="bm32-team-pitch-panel">
-        <div className="bm32-team-pitch" role="img" aria-label={`Escalação ${team.formation} com ${team.filledSlots} de ${team.totalSlots} posições preenchidas`}>
-          <div className="bm32-pitch-lines" aria-hidden="true"><i/><i/><i/><i/></div>
-          {team.lineup.map((fit) => {
-            const name = fit.player?.parsed.playerName ?? '';
-            const record = playerByName.get(name);
-            return (
-              <div className={`bm32-squad-card line-${fit.slot.line} ${fit.player ? '' : 'empty'}`} key={fit.slot.id} style={{ left: `${fit.slot.x}%`, top: `${fit.slot.y}%` }} aria-label={`${fit.slot.label}: ${name || 'sem encaixe'}`}>
-                <span className="bm32-squad-art">{record?.playerImage ? <img src={record.playerImage} alt=""/> : <b>{name ? initials(name) : '+'}</b>}<em>{record?.overall || fit.score || '--'}</em></span>
-                <strong>{fit.slot.label}</strong>
-                <small>{name || 'Sem encaixe'}</small>
-                <i>{record?.playstyle || fit.slot.primaryRoles[0]}</i>
-              </div>
-            );
-          })}
-          <span className="bm32-reserve-count"><Users size={15}/> Reservas {reservePlayers.length}/5</span>
-          <span className="bm32-team-score">Força do time <strong>{team.globalScore}</strong></span>
-        </div>
-      </section>
+      <ManualPitchEditorR573 team={team} players={players}
+        manualLayout={manualLayout} onManualLayoutChange={onManualLayoutChange}/>
 
       <section className="bm32-team-bench-strip">
         <header><div><strong>Banco de reservas</strong><small>Cobertura recomendada para cenários diferentes.</small></div><button type="button" onClick={() => selectTab('banco')}>Ver todos <ChevronRight size={17}/></button></header>
