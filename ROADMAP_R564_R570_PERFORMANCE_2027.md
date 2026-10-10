@@ -11,7 +11,7 @@
 ## Etapas e gates
 | Etapa | Escopo | Critério de aceite | Situação |
 |---|---|---|---|
-| R564 | Certificação de dados e orçamento | 26 atributos com procedência, pontos exatos, habilidades/boosters sem conflito; leitura incompleta não pode autorizar recomendação | Motor e testes neste PR; integração visual pendente |
+| R564 | Certificação de dados e orçamento | 26 atributos com procedência, pontos exatos, habilidades/boosters sem conflito; leitura incompleta não pode autorizar recomendação | Motor, testes e diagnóstico visual no laboratório de fichas neste PR; aplicação de bônus permanece bloqueada sem prova |
 | R565 | Comparador de builds (equilibrada/especialista/competitiva) | Reaproveitar os otimizadores existentes; filtrar custos inválidos e não declarar vencedor sem métrica comparável calibrada | Motor e testes neste PR; ligação dos otimizadores pendente |
 | R566 | DNA tático e formação fluida | Confirmar estilo ofensivo/defensivo, posições e funções reais dos 11; medir compatibilidade sem inventar ativação | PENDENTE |
 | R567 | Habilidades e booster crafting | Respeitar habilidade nativa, slots adicionais ocupados, disponibilidade de tokens, booster de base/fonte e custo | PENDENTE |
@@ -21,6 +21,8 @@
 
 ## Política de integração
 - R564–R565 em branch e PR próprias; não fazer merge com CI RED.
+- O painel `PerformanceCertificationPanelR564` apenas mostra diagnóstico: não aceita como comprovada a origem sem bônus de `result.parsed.attributes`.
+- O adaptador R565 ainda não toma decisões por conta própria na interface; requer ligação a candidatos reais de otimizadores e calibração.
 - PR #128 (R563) trata OCR opcional e está independente; não sobrescrever essa implementação.
 - Implantação gradual com geração de resultados paralela; cada módulo só assume autoridade após validação no Android e fixtures reais.
 - `MATCH_CALIBRATED` é uma declaração fornecida por quem chama o R565: não há verificação experimental automática nesta fase. R568 deverá validá-la com amostras reais e contexto controlado.
