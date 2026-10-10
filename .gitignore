@@ -30,3 +30,6 @@ keystore.properties
 *.aab
 *.apks
 bundletool.jar
+
+# Dados OCR de homologação contêm prints pessoais; nunca enviar ao repositório público.
+.local/ocr-real/
