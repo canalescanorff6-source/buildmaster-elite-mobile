@@ -42,6 +42,8 @@ const common={
   boosterCostTokens:2,
   inventoryConfirmed:true,
   costConfirmed:true,
+  selectableCraftingName:'Agilidade',
+  craftingSelectionConfirmed:true,
 };
 const before=JSON.stringify(card);
 const valid=planSkillBoosterIntelligenceR567(common);
@@ -65,6 +67,10 @@ assert.equal(unknownSkillCost.skills[2].decision,'PENDENTE');
 const expensiveSkill=planSkillBoosterIntelligenceR567({...common,skillCostTokens:2});
 assert.equal(expensiveSkill.skills[2].decision,'RECOMENDAR');
 assert.equal(expensiveSkill.skills[3].decision,'PENDENTE');
+const notSelectable=planSkillBoosterIntelligenceR567({...common,craftingSelectionConfirmed:false});
+assert.equal(notSelectable.boosters[1].decision,'PENDENTE');
+const wrongCrafting=planSkillBoosterIntelligenceR567({...common,selectableCraftingName:'Instinto artilheiro'});
+assert.equal(wrongCrafting.boosters[1].decision,'PENDENTE');
 const noCost=planSkillBoosterIntelligenceR567({...common,costConfirmed:false});
 assert.equal(noCost.boosters[1].decision,'PENDENTE');
 const tooExpensive=planSkillBoosterIntelligenceR567({...common,boosterCostTokens:3});
@@ -82,5 +88,6 @@ const target=readFileSync('src/components/result/ResultEvidencePanelR561.tsx','u
 assert.match(component,/inventoryConfirmed/);
 assert.match(component,/costConfirmed/);
 assert.match(component,/skillCostConfirmed/);
+assert.match(component,/craftingSelectionConfirmed/);
 assert.match(target,/<SkillBoosterPlanningPanelR567 result=\{result\}/);
 console.log('R567 GREEN — slot safety, duplicate guards, tokens, verified cost and UI');
