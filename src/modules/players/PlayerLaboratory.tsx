@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import type { IntegratedPlayerRecord } from '@/modules/core/centralIntelligence';
 import { GameplayScoutingPanelR455 } from './GameplayScoutingPanelR455';
+import { CardEvidenceSlotsR561 } from '@/components/players/CardEvidenceSlotsR561';
 
 type CategoryFilter = 'todos' | 'atacantes' | 'meias' | 'defesa' | 'goleiros';
 type StatusFilter = 'todos' | 'completo' | 'revisar' | 'favoritos';
@@ -157,7 +158,12 @@ export function PlayerLaboratory(props: Props) {
               <span className="bm32-player-overall"><small>GERAL</small><strong>{player.overall || player.efficiency}</strong></span>
             </button>
             <button type="button" className="bm32-player-more" aria-label={`Organizar ${player.name}`} onClick={() => props.onOpenPlayer(player.id)}><MoreVertical size={21}/></button>
-            <GameplayScoutingPanelR455 player={player}/>
+            <div style={{ gridColumn: '1 / -1', minWidth: 0, padding: '0 10px 6px' }}>
+              <CardEvidenceSlotsR561 parsed={player.result.parsed} compact />
+            </div>
+            <div style={{ gridColumn: '1 / -1', minWidth: 0 }}>
+              <GameplayScoutingPanelR455 player={player}/>
+            </div>
           </article>
         ))}
 
