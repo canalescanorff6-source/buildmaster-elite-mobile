@@ -83,6 +83,12 @@ const secondOccupied=planSkillBoosterIntelligenceR567({...common,card:{...card,b
 assert.equal(secondOccupied.boosters[1].decision,'JA_POSSUI');
 const contradictory=planSkillBoosterIntelligenceR567({...common,card:{...card,additionalSkills:['Toque duplo','Interceptação']} as any});
 assert.equal(contradictory.skills[2].decision,'PENDENTE','Contradictory legacy skills must block free slots.');
+const boosterUnverified=planSkillBoosterIntelligenceR567({...common,card:{
+  ...card,boosterSlotsR560:{...card.boosterSlotsR560,source:'OCR'}
+} as any});
+assert.equal(boosterUnverified.craftingSlotConfirmedFree,false,
+  'OCR is recognition, never a source of verified free crafting slots.');
+assert.equal(boosterUnverified.boosters[1].decision,'SEM_VAGA');
 const component=readFileSync('src/components/result/SkillBoosterPlanningPanelR567.tsx','utf8');
 const target=readFileSync('src/components/result/ResultEvidencePanelR561.tsx','utf8');
 assert.match(component,/inventoryConfirmed/);
