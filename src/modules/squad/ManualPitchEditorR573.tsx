@@ -63,7 +63,8 @@ export function ManualPitchEditorR573({team,players,manualLayout,onManualLayoutC
     const point=pointFromPointer(event);
     if(!point)return;
     drag.current.last=point;
-    setPreview(old=>({...old,[drag.current!.id]:point}));
+    const slotId=drag.current.id;
+    setPreview(old=>({...old,[slotId]:point}));
   }
   function onEnd(event:ReactPointerEvent<HTMLButtonElement>,cancel=false){
     const current=drag.current;
