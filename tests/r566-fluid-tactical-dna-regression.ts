@@ -50,6 +50,20 @@ const missing = buildFluidTacticalAuditR566({
 assert.equal(missing.players[0].defenseSlot, null);
 assert.ok(missing.players[0].notes.some(note => note.includes('inválida')));
 
+const cmf = getFormationBlueprint('4-3-1-2').slots.find(slot => slot.position === 'CMF');
+assert.ok(cmf, 'Formação estreita deve conter MLG.');
+const infiltration = buildFluidTacticalAuditR566({
+  team: {
+    ...team,
+    formation: '4-3-1-2',
+    lineup: [{ slot: cmf, player: { parsed: { ...card, offensivePlaystyle: 'Infiltração' } } }],
+  } as unknown as TeamDiagnosis,
+  defenseFormation: '4-3-1-2',
+  teamStyle: 'POSSE_DE_BOLA',
+  defenseSlotByAttackSlot: { [cmf.id]: cmf.id },
+});
+assert.equal(infiltration.players[0].offense, 'PENDENTE', 'MLG Infiltração sem prova não pode ser marcada como ativa.');
+
 const ui = readFileSync('src/modules/squad/IntegratedTeamLab.tsx','utf8');
 assert.match(ui, /buildFluidTacticalAuditR566/);
 assert.match(ui, /DNA Tático Fluido R566/);
