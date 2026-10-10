@@ -23,6 +23,7 @@ let readerV2ReviewAccountR551:string|null=null;
 let readerV2SelectedFileR542:File|null|undefined;
 let readerV2GenerationR542=0;
 let coverCalibration='',coverRevision=0,coverFile:File|null=null,selectedCover:CardCropResult|null=null;
+let coverManuallyAdjusted=false;
 const isV2=()=>readReaderV2Backend()==='v2';
 async function loadLegacyActions(input:CardVisionReaderActionsInputR187){const legacy=await import('../card-reader/cardVisionReaderActionsLegacyR187');return legacy.createCardVisionReaderActionsR187(input)}
 function clearFinal(){readerV2ClosedSnapshotR542=null;readerV2ReviewDraftR542=null;readerV2BridgeR542=null;readerV2SourceFileR542=null;readerV2ReviewAccountR551=null}
@@ -30,20 +31,19 @@ function raw(review:ReaderV2ReviewDraft){return readerV2ReviewRawText(review)}
 
 export function createCardVisionReaderActionsR187(input:CardVisionReaderActionsInputR187){
  async function stopV2(cancel=false){const active=readerV2OrchestratorR542;if(!active)return;readerV2OrchestratorR542=null;if(cancel)await active.cancel().catch(()=>undefined);active.close()}
- function calibratedCoverZone(){return input.efhubCalibrationActiveRef.current?mapLegacyCalibrationToReaderV2(input.efhubCalibrationZonesRef.current).find(zone=>zone.key==='cardType'&&zone.enabled):undefined}
+ function calibratedZones(){return input.efhubCalibrationActiveRef.current?mapLegacyCalibrationToReaderV2(input.efhubCalibrationZonesRef.current):undefined}
  async function prepareCover(file:File){
   const generation=readerV2GenerationR542,account=activeAccountNamespace(),revision=++coverRevision;
-  const zone=calibratedCoverZone(),calibration=JSON.stringify(zone??null);
-  const calibrated=zone?await import('../card-reader/cardArtCrop').then(module=>module.createManualEfhubCardPreview(file,zone)).catch(()=>null):null;
-  const cover=calibrated??await import('../card-reader/cardPreviewServiceR130').then(module=>module.createPlayerCardPreviewR130(file)).catch(()=>null);
+  const zones=calibratedZones(),calibration=JSON.stringify(zones??null);
+  const cover=await import('../card-reader/cardPreviewServiceR130').then(module=>module.createPlayerCardPreviewR130(file,zones)).catch(()=>null);
   if(generation!==readerV2GenerationR542||account!==activeAccountNamespace()||revision!==coverRevision)return;
-  if(cover){coverCalibration=calibration;coverFile=file;selectedCover=cover;input.setPlayerCardImage(cover.portraitPreview??cover.preview);input.setCardCropResult(cover)}
+  if(cover){coverCalibration=calibration;coverFile=file;selectedCover=cover;coverManuallyAdjusted=false;input.setPlayerCardImage(cover.portraitPreview??cover.preview);input.setCardCropResult(cover)}
   else input.setStatus('Não foi possível detectar a foto. O print original foi preservado; tente redetectar.');
  }
  async function handleFile(file:File){
   if(isV2()){
    if(!file.type?.toLowerCase().startsWith('image/')){input.setStatus('Selecione uma imagem válida da carta.');return}
-   const generation=++readerV2GenerationR542;readerV2SelectedFileR542=file;coverRevision++;coverFile=null;selectedCover=null;coverCalibration='';await stopV2(true);if(generation!==readerV2GenerationR542)return;clearFinal();input.setPendingBackgroundCheckpoint(null);input.setFileName(file.name||`reader-v2-${Date.now()}.png`);input.setSelectedFile(file);input.setPreview(input.readerImageMemory.replacePreview(file));
+   const generation=++readerV2GenerationR542;readerV2SelectedFileR542=file;coverRevision++;coverFile=null;selectedCover=null;coverCalibration='';coverManuallyAdjusted=false;await stopV2(true);if(generation!==readerV2GenerationR542)return;clearFinal();input.setPendingBackgroundCheckpoint(null);input.setFileName(file.name||`reader-v2-${Date.now()}.png`);input.setSelectedFile(file);input.setPreview(input.readerImageMemory.replacePreview(file));
    input.setPlayerCardImage(null);input.setCardCropResult(null);input.setCardCropAdjustOpen(false);input.setResult(null);input.setDraftResult(null);input.setRawText('');input.setOcrDone(false);input.setLoading(false);input.setOcrCancelable(false);input.setReaderProgress(null);input.setPremiumReadings([]);input.setTotalReadingSession(null);input.setSinglePrintSession(null);input.readerImageMemory.releaseEnhanced();input.setEnhancedPreview(null);input.setQualityReport(null);input.setEnhancementMode('original');input.setManualMode(false);input.setPreFinalConfirmation(null);input.setStatus('Imagem selecionada no Reader V2. O OCR só será carregado quando você iniciar a leitura.');await prepareCover(file);return
   }
   return (await loadLegacyActions(input)).handleFile(file)
@@ -62,7 +62,7 @@ export function createCardVisionReaderActionsR187(input:CardVisionReaderActionsI
    const zones=input.efhubCalibrationActiveRef.current?mapLegacyCalibrationToReaderV2(input.efhubCalibrationZonesRef.current):undefined;
    const output=await orchestrator.start(zones?'zones':'automatic',zones);if(generation!==readerV2GenerationR542)return;readerV2ClosedSnapshotR542=output.ocrSnapshot;readerV2ReviewDraftR542=output.review;readerV2BridgeR542=null;
    orchestrator.close();readerV2OrchestratorR542=null;
-   try{if(coverFile!==file||!selectedCover||coverCalibration!==JSON.stringify(calibratedCoverZone()??null))await prepareCover(file);const cover=coverFile===file?selectedCover:null;if(generation!==readerV2GenerationR542)return;if(account!==activeAccountNamespace()){clearFinal();readerV2ReviewAccountR551=account;input.setLoading(false);input.setOcrCancelable(false);return}if(cover){const {identifyReadCardEdition}=await import('../card-catalog/readerCardEdition');const edition=await identifyReadCardEdition(file,cover.box,output.review);if(generation!==readerV2GenerationR542)return;if(account!==activeAccountNamespace()){clearFinal();readerV2ReviewAccountR551=account;input.setLoading(false);input.setOcrCancelable(false);return}if(edition){output.review.editionIdentity=edition.identity;output.review.trainingBase=edition.trainingBase}}}catch{/* OCR remains usable when cover extraction fails. */}
+   try{if(coverFile!==file||!selectedCover||(!coverManuallyAdjusted&&coverCalibration!==JSON.stringify(calibratedZones()??null)))await prepareCover(file);const cover=coverFile===file?selectedCover:null;if(generation!==readerV2GenerationR542)return;if(account!==activeAccountNamespace()){clearFinal();readerV2ReviewAccountR551=account;input.setLoading(false);input.setOcrCancelable(false);return}if(cover){const {identifyReadCardEdition}=await import('../card-catalog/readerCardEdition');const edition=await identifyReadCardEdition(file,cover.box,output.review);if(generation!==readerV2GenerationR542)return;if(account!==activeAccountNamespace()){clearFinal();readerV2ReviewAccountR551=account;input.setLoading(false);input.setOcrCancelable(false);return}if(edition){output.review.editionIdentity=edition.identity;output.review.trainingBase=edition.trainingBase}}}catch{/* OCR remains usable when cover extraction fails. */}
    if(generation!==readerV2GenerationR542)return;if(account!==activeAccountNamespace()){clearFinal();readerV2ReviewAccountR551=account;input.setLoading(false);input.setOcrCancelable(false);return}
    input.setRawText(raw(output.review));input.setOcrDone(true);input.setManualMode(true);input.setManualFields({playerName:output.review.playerName,level:output.review.level,trainingPointsTotal:output.review.points,attributes:readerV2ReviewAttributes(output.review),nativeSkills:deriveReaderCanonicalEvidenceR549(output.review.fields).skillValues??[]});input.setCardPositionOverride(normalizeReaderV2Position(output.review.mainPosition)??'AUTO');input.setPlaystyleOverride(output.review.fields.find(field=>field.key==='playstyle')?.value||'AUTO');input.setDefensivePlaystyleOverride('AUTO');input.setPremiumReadings([]);input.setTotalReadingSession(null);input.setSinglePrintSession(null);input.setPreFinalConfirmation({playerName:output.review.playerName,level:output.review.level,points:output.review.points,pointsSource:output.review.pointsSource,preview:input.preview??null,mainPosition:output.review.mainPosition,uncertainKeys:[...output.review.uncertainKeys]});input.setReaderProgress({percent:100,phase:'Leitura concluída',detail:'OCR encerrado. Confira nome, nível e pontos antes de gerar a ficha.',startedAt,completed:output.evidence.fields.length,total:output.evidence.fields.length,deadlineMs:120_000});input.setStatus('Leitura concluída. Confira os dados antes de gerar a ficha.');input.openMainSection('resultado');
    input.setLoading(false);input.setOcrCancelable(false);return output
@@ -94,7 +94,7 @@ export function createCardVisionReaderActionsR187(input:CardVisionReaderActionsI
   const preview=await art.renderCardCropPreview(file,box).catch(()=>null);if(!preview)return;
   const portrait=await art.renderPlayerPortraitPreview(file,box).catch(()=>null);
   if(generation!==readerV2GenerationR542||account!==activeAccountNamespace()||revision!==coverRevision)return;
-  input.setPlayerCardImage(portrait?.preview??preview);selectedCover={...crop,preview,portraitPreview:portrait?.preview??null,portraitBox:portrait?.box,box,method:'manual-adjustment'};coverFile=file;input.setCardCropResult(selectedCover);
+  input.setPlayerCardImage(portrait?.preview??preview);selectedCover={...crop,preview,portraitPreview:portrait?.preview??null,portraitBox:portrait?.box,box,method:'manual-adjustment'};coverFile=file;coverManuallyAdjusted=true;input.setCardCropResult(selectedCover);
  }
 
  async function redetectPlayerCard(){if(isV2()){if(input.selectedFile)await prepareCover(input.selectedFile);return}return (await loadLegacyActions(input)).redetectPlayerCard()}

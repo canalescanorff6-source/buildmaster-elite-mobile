@@ -1,5 +1,6 @@
 import type { ReaderV2Zone } from './readerV2Types';
 import { prepareReaderV2Crop } from './readerV2CropPreparation';
+import { detectReaderV2ImageFrame, type ReaderV2Frame } from './readerV2Frame';
 
 export const DEFAULT_MAX_SOURCE_DIMENSION = 1800;
 export const DEFAULT_MAX_CROP_MEGAPIXELS = 1.2;
@@ -17,12 +18,14 @@ export type ReaderV2ImageSessionSnapshot = {
   preview: string;
   cropActive: boolean;
   closed: boolean;
+  frame?: ReaderV2Frame;
 };
 
 export interface ReaderV2ImageSession {
   readonly preview: string;
   readonly width: number;
   readonly height: number;
+  readonly frame?: ReaderV2Frame;
   withCrop<T>(zone: ReaderV2Zone, operation: (crop: HTMLCanvasElement) => Promise<T> | T): Promise<T>;
   close(): void;
   snapshot(): ReaderV2ImageSessionSnapshot;
@@ -54,6 +57,8 @@ export async function openReaderV2ImageSession(
   let sourceBitmap: (CanvasImageSource & {width:number;height:number;close?:()=>void}) | null = null;
   let originalWidth = 0;
   let originalHeight = 0;
+  let frame:ReaderV2Frame|undefined;
+  let sourceFrame:ReaderV2Frame|undefined;
   let cropActive = false;
   let closed = false;
 
@@ -63,16 +68,24 @@ export async function openReaderV2ImageSession(
     if(!decoded)throw new Error('Não foi possível abrir a imagem da carta.');
     originalWidth = decoded.width;
     originalHeight = decoded.height;
-    const scale = Math.min(1, maxSourceDimension / Math.max(1, Math.max(decoded.width, decoded.height)));
+    try{frame=detectReaderV2ImageFrame(decoded)}catch{/* Inconclusive detection keeps the original layout available. */}
+    // Crop before resizing to preserve the panel's tiny glyphs.
+    sourceFrame=frame&&(frame.w<.94||frame.h<.92)?frame:undefined;
+    const sourceX=sourceFrame?Math.floor(decoded.width*sourceFrame.x):0;
+    const sourceY=sourceFrame?Math.floor(decoded.height*sourceFrame.y):0;
+    const sourceWidth=sourceFrame?Math.min(decoded.width-sourceX,Math.round(decoded.width*sourceFrame.w)):decoded.width;
+    const sourceHeight=sourceFrame?Math.min(decoded.height-sourceY,Math.round(decoded.height*sourceFrame.h)):decoded.height;
+    if(sourceFrame){sourceFrame={x:sourceX/decoded.width,y:sourceY/decoded.height,w:sourceWidth/decoded.width,h:sourceHeight/decoded.height};frame=sourceFrame}
+    const scale = Math.min(1, maxSourceDimension / Math.max(1, Math.max(sourceWidth, sourceHeight)));
 
-    if (scale < 1) {
+    if (scale < 1 || sourceFrame) {
       const canvas = document.createElement('canvas');
       try {
-        canvas.width = Math.max(1, Math.round(decoded.width * scale));
-        canvas.height = Math.max(1, Math.round(decoded.height * scale));
+        canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+        canvas.height = Math.max(1, Math.round(sourceHeight * scale));
         const context = canvas.getContext('2d');
         if (!context) throw new Error('Não foi possível preparar a fonte reduzida do Reader V2.');
-        context.drawImage(decoded, 0, 0, canvas.width, canvas.height);
+        context.drawImage(decoded, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
         try{sourceBitmap = typeof createImageBitmap==='function'?await createImageBitmap(canvas):canvas;}catch{sourceBitmap=canvas;}
         if(sourceBitmap===canvas)sourceBitmap.close=()=>{canvas.width=1;canvas.height=1;};
       } finally {
@@ -93,8 +106,9 @@ export async function openReaderV2ImageSession(
     throw new Error('Não foi possível abrir a imagem no Reader V2.');
   }
 
-  const width = sourceBitmap.width;
-  const height = sourceBitmap.height;
+  const virtualScale=Math.min(1,maxSourceDimension/Math.max(originalWidth,originalHeight));
+  const width = sourceFrame?Math.round(originalWidth*virtualScale):sourceBitmap.width;
+  const height = sourceFrame?Math.round(originalHeight*virtualScale):sourceBitmap.height;
 
   function assertOpen() {
     if (closed || !sourceBitmap) throw new Error('Sessão de imagem do Reader V2 encerrada.');
@@ -110,18 +124,19 @@ export async function openReaderV2ImageSession(
 
     const canvas = document.createElement('canvas');
     try {
-      const x = normalizeZoneCoordinate(zone.x);
-      const y = normalizeZoneCoordinate(zone.y);
-      const w = Math.max(0.001, normalizeZoneCoordinate(zone.w));
-      const h = Math.max(0.001, normalizeZoneCoordinate(zone.h));
-      const sourceX = Math.max(0, Math.min(width - 1, Math.floor(width * x)));
-      const sourceY = Math.max(0, Math.min(height - 1, Math.floor(height * y)));
-      const sourceWidth = Math.max(1, Math.min(width - sourceX, Math.round(width * w)));
-      const sourceHeight = Math.max(1, Math.min(height - sourceY, Math.round(height * h)));
+      const bounds=sourceFrame??{x:0,y:0,w:1,h:1};
+      const x = normalizeZoneCoordinate((zone.x-bounds.x)/bounds.w);
+      const y = normalizeZoneCoordinate((zone.y-bounds.y)/bounds.h);
+      const w = Math.max(0.001, normalizeZoneCoordinate(zone.w/bounds.w));
+      const h = Math.max(0.001, normalizeZoneCoordinate(zone.h/bounds.h));
+      const bitmapWidth=sourceBitmap!.width,bitmapHeight=sourceBitmap!.height;
+      const sourceX = Math.max(0, Math.min(bitmapWidth - 1, Math.floor(bitmapWidth * x)));
+      const sourceY = Math.max(0, Math.min(bitmapHeight - 1, Math.floor(bitmapHeight * y)));
+      const sourceWidth = Math.max(1, Math.min(bitmapWidth - sourceX, Math.round(bitmapWidth * w)));
+      const sourceHeight = Math.max(1, Math.min(bitmapHeight - sourceY, Math.round(bitmapHeight * h)));
       const maxCropPixels = maxCropMegapixels * 1_000_000;
-      // Phone prints have 8–12 px glyphs. Enlarge the crop, keeping the same
-      // pixel budget and releasing it before the next recognition.
-      const cropScale = Math.min(zone.key==='mainPosition'&&zone.lightText===false?6:3, Math.max(1, 1600 / height, zone.key==='mainPosition'?320/sourceWidth:1), Math.sqrt(maxCropPixels / Math.max(1, sourceWidth * sourceHeight)));
+      // Enlarge tiny glyphs within the crop budget.
+      const cropScale = Math.min(zone.key==='mainPosition'&&zone.lightText===false?6:3, Math.max(1, 1600 / bitmapHeight, zone.key==='mainPosition'?320/sourceWidth:1), Math.sqrt(maxCropPixels / Math.max(1, sourceWidth * sourceHeight)));
 
       canvas.width = Math.max(1, Math.round(sourceWidth * cropScale));
       canvas.height = Math.max(1, Math.round(sourceHeight * cropScale));
@@ -157,8 +172,8 @@ export async function openReaderV2ImageSession(
   }
 
   function snapshot(): ReaderV2ImageSessionSnapshot {
-    return { width, height, originalWidth, originalHeight, preview, cropActive, closed };
+    return { width, height, originalWidth, originalHeight, preview, cropActive, closed, frame };
   }
 
-  return { preview, width, height, withCrop, close, snapshot };
+  return { preview, width, height, frame, withCrop, close, snapshot };
 }

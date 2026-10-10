@@ -378,7 +378,7 @@
     "test:r534": "node tests/v40-80-r534-ci-doctor-sharding-regression.mjs && node tests/v40-80-r534-parallel-release-workflow-regression.mjs && node tests/v40-80-r534-migrator-regression.mjs",
     "test:r530": "node tests/v44-00-r530-reference-redesign-closure-regression.mjs",
     "test:reader": "node scripts/run-reader-tests.mjs",
-    "test:reader:browser": "node tests/reader-prefinal-react-flow-regression.mjs && node tests/reader-v2-real-browser-ocr-regression.mjs && node tests/reader-v2-efhub-browser-regression.mjs && node tests/reader-v2-original-cards-browser-regression.mjs && node tests/reader-v2-metadata-browser-regression.mjs && node tests/reader-v2-cristiano-browser-regression.mjs && node tests/reader-v2-calibration-zoom-browser-regression.mjs && node tests/card-edition-browser-regression.mjs",
+    "test:reader:browser": "node tests/reader-prefinal-react-flow-regression.mjs && node tests/reader-v2-real-browser-ocr-regression.mjs && node tests/reader-v2-efhub-browser-regression.mjs && node tests/reader-v2-original-cards-browser-regression.mjs && node tests/reader-v2-metadata-browser-regression.mjs && node tests/reader-v2-cristiano-browser-regression.mjs && node tests/reader-v2-calibration-zoom-browser-regression.mjs && node tests/reader-v2-framed-browser-regression.mjs && node tests/card-edition-browser-regression.mjs",
     "test:audit": "node scripts/run-app-audit-tests.mjs"
   },
   "dependencies": {

@@ -7,7 +7,7 @@ const originalLoad=(Module as unknown as {_load:Function})._load;
 (Module as unknown as {_load:Function})._load=function(request:string,...args:unknown[]){
  if(request==='../../lib/accountStorage')return {activeAccountNamespace:()=>account};
  if(request==='./readerV2AppRuntime')return {createReaderV2AppOrchestrator:()=>({select:async()=>{},start:async()=>({review:{...review},evidence:{fields:[]},ocrSnapshot:{stage:'ocrClosed',workerReady:false,pendingRecognitions:0}}),cancel:async()=>{},close:()=>{}})};
- if(request==='../card-reader/cardPreviewServiceR130')return {createPlayerCardPreviewR130:async()=>({preview:'blob:cover',box:{x:0,y:0,w:1,h:1}})};
+ if(request==='../card-reader/cardPreviewServiceR130')return {createPlayerCardPreviewR130:async(_file:any,zones:any[])=>{const zone=zones?.find(zone=>zone.key==='cardType');if(zone){manualZone=zone;return {preview:'blob:calibrated-cover',box:zone}}return {preview:'blob:cover',box:{x:0,y:0,w:1,h:1}}}};
  if(request==='../card-reader/cardArtCrop')return {createManualEfhubCardPreview:async(_file:any,zone:any)=>{manualZone=zone;return {preview:'blob:calibrated-cover',box:zone}},adjustCardCropBox:(box:any)=>({...box,x:.1}),renderCardCropPreview:async()=> 'blob:adjusted',renderPlayerPortraitPreview:async()=>({preview:'blob:portrait-adjusted',box:{x:.1,y:0,w:.8,h:1}})};
  if(request==='../card-catalog/readerCardEdition')return {identifyReadCardEdition:async()=>{if(wait){entered();await new Promise<void>(done=>release=done)}return null}};
  return originalLoad.call(this,request,...args);

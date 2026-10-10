@@ -25,7 +25,12 @@ let pendingCancel: Promise<void> | null = null;
 let cancelEntered: (()=>void) | null = null;
 const originalLoad = (Module as unknown as {_load:Function})._load;
 (Module as unknown as {_load:Function})._load = function(request:string,...args:unknown[]) {
-  if(request === '../card-reader/cardPreviewServiceR130') return {createPlayerCardPreviewR130:async(file:File)=>({preview:'data:cover:'+file.name})};
+  if(request === '../card-reader/cardPreviewServiceR130') return {createPlayerCardPreviewR130:async(file:File,zones?:any[])=>({preview:zones?'data:calibrated-photo':'data:cover:'+file.name,box:zones?.find(zone=>zone.key==='cardType')??{x:.1,y:.1,w:.2,h:.3},method:'template-fallback'})};
+  if(request === '../card-reader/cardArtCrop') return {
+    adjustCardCropBox:(box:any)=>({...box,x:box.x+.01}),
+    renderCardCropPreview:async()=> 'data:manual-photo',renderPlayerPortraitPreview:async()=>null,
+    createManualEfhubCardPreview:async()=>({preview:'data:calibrated-photo',box:{x:.2,y:.2,w:.2,h:.3},method:'manual-adjustment'}),
+  };
   if(request === './readerV2AppRuntime') return {createReaderV2AppOrchestrator:()=>({
     select:async()=>{selectEntered?.();await pendingSelect;},start:async()=>{starts++;if(startError)throw startError;return {review:outputReview,evidence:{fields:outputReview.fields},ocrSnapshot:closed};},
     cancel:async()=>{cancelEntered?.();await pendingCancel;},close:()=>{},
@@ -52,7 +57,7 @@ function context() {
   input.openMainSection=(section:string)=>{state.mainSection=section;};
   const ref={get current(){return {selectedFile:state.selectedFile,fileName:state.fileName};}};
   const actions=()=>createCardVisionReaderActionsR187({...input,...state,isAnalysisCurrent:captureReaderContextAuthorityR549(ref)} as CardVisionReaderActionsInputR187);
-  return {state,actions};
+  return {state,actions,input};
 }
 
 async function main() {
@@ -149,5 +154,16 @@ async function main() {
   assert.equal(c.state.loading,true,'Finalizar cancelamento antigo não pode apagar o progresso da nova leitura.');
   assert.equal(c.state.ocrCancelable,true);assert.ok(c.state.readerProgress);
   releaseOldSelect();await oldRead;releaseSelect();await newRead;
+  pendingSelect=null;pendingCancel=null;selectEntered=null;cancelEntered=null;
+  const photo=context();
+  await photo.actions().handleFile(file);
+  await photo.actions().adjustDetectedCard('right');
+  assert.equal(photo.state.playerCardImage,'data:manual-photo');
+  photo.input.efhubCalibrationActiveRef.current=true;
+  photo.input.efhubCalibrationZonesRef.current=[{key:'cardType',enabled:true,x:.2,y:.2,w:.2,h:.3}];
+  await photo.actions().analyzeSelectedImage();
+  assert.equal(photo.state.playerCardImage,'data:manual-photo','Uma releitura com calibração alterada conserva a foto já ajustada pelo usuário.');
+  await photo.actions().redetectPlayerCard();
+  assert.equal(photo.state.playerCardImage,'data:calibrated-photo','Redetectar explicitamente permite substituir a foto.');
 }
 void main().then(()=>console.log('Reader V2: navegação, dados por carta e tentativa após falha aprovados.')).catch(cause=>{console.error(cause);process.exitCode=1;}).finally(()=>{(Module as unknown as {_load:Function})._load=originalLoad;});
