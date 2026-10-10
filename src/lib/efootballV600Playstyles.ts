@@ -2,11 +2,6 @@ import { canonicalizeOffensivePlaystyleR124, canonicalizeDefensivePlaystyleR124,
 
 export const EFOOTBALL_V600_PLAYSTYLE_VERSION = '6.0-r124-phase-separated-live-safe' as const;
 
-/**
- * A Konami confirmou publicamente Pressão no Ataque como exemplo de estilo
- * defensivo na v6.0. Nomes adicionais podem ser preservados pelo OCR como
- * provisórios, mas só recebem peso de gameplay após confirmação.
- */
 export const CONFIRMED_V600_DEFENSIVE_PLAYSTYLES = phasePlaystyleOptionsR124('DEFENSIVE');
 export type ConfirmedV600DefensivePlaystyle = string;
 
@@ -58,17 +53,12 @@ function phasePairFromCompactZone(text: string) {
 
   if (offensive || defensive) return { offensive, defensive };
 
-  // Layout compacto v6.0: duas linhas na área exclusiva de estilos representam
-  // ataque e defesa nessa ordem. Cada linha é validada pela família correta.
   if (unphased.length >= 2) {
     const firstOffensive=unphased[0]?.offensive ?? null;
     const secondDefensive=unphased[1]?.defensive ?? null;
     if (firstOffensive || secondDefensive) return { offensive:firstOffensive, defensive:secondDefensive };
   }
 
-  // Alguns OCRs colam as duas cápsulas numa única linha (ex.:
-  // "Basic Attacking GK"). Nesse caso preservamos a ordem visual e ainda
-  // exigimos que cada rótulo pertença à sua fase correta.
   const offensiveMatches=findPhasePlaystyleMatchesR124(text,'OFFENSIVE');
   const defensiveMatches=findPhasePlaystyleMatchesR124(text,'DEFENSIVE');
   const firstOffensive=offensiveMatches[0] ?? null;
@@ -87,7 +77,6 @@ function firstCaptured(text: string, patterns: RegExp[]): string | null {
 
 export type V600PlaystyleReading = {
   offensive: string | null;
-  /** Nome exibido na carta; pode ser provisório quando ainda não está no catálogo confirmado. */
   defensive: string | null;
   defensiveConfirmed: boolean;
   defensiveRaw: string | null;
@@ -132,12 +121,7 @@ export function detectV600Playstyles(text: string): V600PlaystyleReading {
   const legacy = canonicalizeV600OffensivePlaystyle(text);
   const explicitDefensiveOnly = !legacy ? canonicalizeV600DefensivePlaystyle(text) : null;
   if (legacy || explicitDefensiveOnly) return {
-    // Cartas antigas exibem um único estilo. Quando esse rótulo hoje pertence
-    // apenas à defesa (ex.: Goleiro Ofensivo/Destruidor), o ataque deve cair em
-    // Básico em vez de ficar vazio e depois herdar o estilo genérico legado.
     offensive: legacy ?? 'Básico',
-    // Para um estilo ofensivo legado conhecido, a fase sem a bola continua
-    // neutra; para um rótulo exclusivamente defensivo, preservamos a defesa.
     defensive: legacy ? 'Básico' : explicitDefensiveOnly,
     defensiveConfirmed: Boolean(legacy || explicitDefensiveOnly),
     defensiveRaw: legacy ? null : explicitDefensiveOnly,
@@ -152,12 +136,6 @@ export type DefensivePhaseTrainingBias = Partial<Record<
   number
 >>;
 
-/**
- * Peso somente da fase sem a bola. Estilos antigos que agora aparecem na seta azul
- * podem ser reutilizados como identidade defensiva sem alterar o nome ofensivo.
- * Rótulos desconhecidos continuam salvos no catálogo vivo, mas recebem peso zero
- * até existir mapeamento canônico/confirmado.
- */
 export function defensivePhaseTrainingBias(value: unknown): DefensivePhaseTrainingBias {
   const style = canonicalizeV600DefensivePlaystyle(value);
   if (!style) return {};

@@ -30,9 +30,6 @@ const CATEGORY_BY_SKILL: Record<string, SkillCategory> = {
 };
 
 const POSITION_SKILL_POOLS: Record<PositionCode, readonly string[]> = {
-  // Os pools são deliberadamente maiores que cinco. Assim, mesmo quando a
-  // carta já possui várias habilidades, o motor ainda consegue entregar cinco
-  // opções adicionais úteis sem recorrer a habilidades de outra função.
   GK: [
     'Reposição baixa do goleiro', 'Reposição alta do goleiro', 'Arremesso longo do goleiro', 'Pegador de pênalti',
     'Espírito guerreiro', 'Liderança'
@@ -160,9 +157,6 @@ function slotBlueprintFor(result: AnalysisResult, position: PositionCode): reado
   const dribbleDna = average(attributes.ballControl, attributes.dribbling, attributes.tightPossession, attributes.balance, attributes.acceleration);
   const creationDna = average(attributes.lowPass, attributes.loftedPass, attributes.ballControl);
   const finishingDna = average(attributes.finishing, attributes.offensiveAwareness, attributes.kickingPower);
-  // Quando a carta é claramente especialista em condução, dois dos cinco
-  // espaços oficiais ficam reservados ao DNA de drible. Isso impede que uma
-  // carta técnica receba um Top 5 genérico apenas por atuar como SA/MAT/ponta.
   if (['SS', 'AMF', 'LWF', 'RWF', 'LMF', 'RMF'].includes(position)
     && dribbleDna >= 86 && dribbleDna >= creationDna + 5 && dribbleDna >= finishingDna + 5) {
     return ['drible', 'drible', 'passe', 'finalização', 'físico'];
@@ -236,8 +230,6 @@ function hash(value: string) { let output = 2166136261; for (let index = 0; inde
 function average(...values: Array<number | null | undefined>) { const valid = values.map((value) => Number(value ?? 0)).filter((value) => value > 0); return valid.length ? valid.reduce((sum, value) => sum + value, 0) / valid.length : 0; }
 
 export function resolveAdditionalSkillPosition(result: AnalysisResult): PositionCode {
-  // r27: o Top 5 segue a função realmente usada na ficha final.
-  // A identidade continua vindo da carta, mas a posição atual não pode ser ignorada.
   return result.bestPosition.code;
 }
 
@@ -245,13 +237,11 @@ export function isRoleCompatibleAdditionalSkill(skill: string, position: Positio
   return POSITION_SKILL_POOLS[position].includes(skill);
 }
 
-/** Catálogo oficial compatível com a posição escolhida, em ordem de prioridade-base. */
 export function officialAdditionalSkillPoolForPosition(position: PositionCode) {
   return POSITION_SKILL_POOLS[position]
     .filter((skill) => OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as (typeof OFFICIAL_ADDITIONAL_SKILL_NAMES)[number]));
 }
 
-/** Quantidade máxima de habilidades oficiais ainda disponíveis sem repetir a carta. */
 export function availableOfficialAdditionalSkillCount(result: AnalysisResult) {
   const position = resolveAdditionalSkillPosition(result);
   const owned = buildOwnedSkillKeys(result.parsed.nativeSkills, result.parsed.specialSkills, result.parsed.additionalSkills ?? []);
@@ -425,10 +415,6 @@ function buildCandidate(result: AnalysisResult, plan: TrainingPlan, position: Po
   const supports = trainingSupport(skill);
   const planScore = supports.reduce((sum, item) => sum + Number(plan[item.key] ?? 0) * item.weight, 0);
   const identityBoost = hash(`${result.parsed.playerName}|${position}|${result.parsed.playstyle}|${skill}`) % 3;
-  // O desempate usa identidade estável e ignora internalId/overall do print,
-  // para a mesma carta não trocar habilidades apenas pelo GER exibido.
-  // Recomendações antigas não participam da nota: elas poderiam trazer de
-  // volta uma habilidade incompatível gerada por versões anteriores.
   const rawScore = base + specific.score + profile.score + planScore + identityBoost;
   const score = clamp(42 + rawScore * 0.72);
   const reasons = [
@@ -466,7 +452,6 @@ function categoryDiversityAdjustment(position: PositionCode, selected: Candidate
   return -(count - cap + 1) * 8;
 }
 
-/** Sempre produz cinco opções treináveis quando existem cinco habilidades não possuídas no pool seguro da função. */
 export function buildPersonalizedSkillPlan(result: AnalysisResult, plan: TrainingPlan, options: AdditionalSkillProfileOptions = {}): UnifiedSkillDecision[] {
   const position = options.positionOverride ?? resolveAdditionalSkillPosition(result);
   const owned = buildOwnedSkillKeys(result.parsed.nativeSkills, result.parsed.specialSkills, result.parsed.additionalSkills ?? []);
@@ -493,15 +478,11 @@ export function buildPersonalizedSkillPlan(result: AnalysisResult, plan: Trainin
     }))
     .sort((a, b) => b.combined - a.combined || b.candidate.score - a.candidate.score || a.candidate.name.localeCompare(b.candidate.name, 'pt-BR'));
 
-  // Primeiro preenche os cinco papéis funcionais da posição. Isso impede que
-  // uma nota alta concentre 5 passes em um zagueiro ou 5 finalizações em um SA.
   for (const category of preferredCategories) {
     const next = rankedFor(candidates.filter((candidate) => candidate.category === category))[0]?.candidate;
     if (next) selected.push(next);
   }
 
-  // Se a carta já possuir todas as opções de uma categoria, completa apenas
-  // com habilidades do pool seguro da mesma posição.
   while (selected.length < 5) {
     const next = rankedFor(candidates)[0]?.candidate;
     if (!next) break;

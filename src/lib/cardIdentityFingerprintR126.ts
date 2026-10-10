@@ -42,17 +42,6 @@ function trainingSignature(parsed: ParsedCard) {
   return TRAINING_KEYS.map((key) => `${key}:${Number(parsed.autoTrainingPlan?.[key] ?? 0)}`).join(',');
 }
 
-/**
- * Identidade ESTÁVEL da edição da carta.
- *
- * Nunca inclui estado que o usuário pode alterar ou que é derivado da ficha:
- * GER/Overall, atributos já treinados, position ratings treináveis, progressão,
- * posição escolhida para uso, habilidades adicionais, Ímpeto, técnico ou formação.
- *
- * A edição é distinguida pela evidência estrutural mais estável disponível no print:
- * jogador + tipo/tag + posição/estilos registrados + dados físicos + nível máximo
- * + inventário nativo/especial. O `internalId` legado fica fora porque embute GER.
- */
 export function legacyStructuralCardIdentityFingerprintR126(parsed: ParsedCard) {
   const positions = [...new Set<PositionCode>([parsed.mainPosition, ...(parsed.positions ?? [])])]
     .sort((left, right) => left.localeCompare(right, 'en'))
@@ -83,11 +72,6 @@ export function legacyStructuralCardIdentityFingerprintR126(parsed: ParsedCard) 
   return `card-r126-${fnv1a(source)}`;
 }
 
-/**
- * Identidade canônica da edição.
- * Prioridade: ID oficial verificado > catalogCardId R438 > fingerprint estrutural legado.
- * gameVersion fica fora: patches do jogo versionam evidência/scouting, não a carta.
- */
 export function cardIdentityFingerprintR126(parsed: ParsedCard) {
   const edition = parsed.editionIdentity;
   const official = normalizeText(edition?.officialCardId);
@@ -101,17 +85,10 @@ export function cardIdentityFingerprintR126(parsed: ParsedCard) {
   return legacyStructuralCardIdentityFingerprintR126(parsed);
 }
 
-/** Aliases de migração: permitem que uma ficha antiga pelo fingerprint estrutural seja reconhecida após resolução no catálogo. */
 export function cardIdentityAliasesR457(parsed: ParsedCard) {
   return [...new Set([cardIdentityFingerprintR126(parsed), legacyStructuralCardIdentityFingerprintR126(parsed)])];
 }
 
-/**
- * Impressão do ESTADO LIDO da mesma carta.
- * Serve para cache/invalidação e não para decidir se é outra edição.
- * Inclui números e recursos mutáveis que podem alterar a análise final,
- * mas continua excluindo GER para impedir qualquer dependência indireta dele.
- */
 export function cardEvidenceFingerprintR126(parsed: ParsedCard) {
   const impetos = (parsed.impetos ?? [])
     .map((item) => `${normalizeText(item.name)}:${item.value ?? ''}:${item.active === false ? 0 : 1}`)
@@ -142,12 +119,6 @@ export function cardEvidenceFingerprintR126(parsed: ParsedCard) {
 }
 
 
-/**
- * Identidade do atleta, acima da edição da carta.
- * É usada apenas onde o jogo exige uma pessoa única no elenco/escalação.
- * Não inclui tipo de carta, idade histórica, GER ou progressão: duas cartas do
- * mesmo jogador continuam sendo o mesmo atleta para fins de escalação.
- */
 export function playerIdentityKeyFromNameR126(playerName: unknown, fallbackCardIdentity = '') {
   const name = normalizeText(playerName);
   if (name && name !== 'jogador nao identificado' && name !== 'novo jogador' && name !== 'jogador para revisar') {
