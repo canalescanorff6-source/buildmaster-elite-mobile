@@ -1,0 +1,47 @@
+name: R571 — Preparação do corpus OCR real
+on:
+  pull_request:
+    paths:
+      - 'scripts/evaluate-ocr-golden-corpus-r571.mjs'
+      - 'tests/r571-ocr-corpus-release-gate-regression.mjs'
+      - 'docs/R571_OCR_REAL_E_ACEITE_ANDROID.md'
+      - '.github/workflows/r571-ocr-real-corpus.yml'
+      - 'package.json'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/evaluate-ocr-golden-corpus-r571.mjs'
+      - 'tests/r571-ocr-corpus-release-gate-regression.mjs'
+jobs:
+  contract:
+    name: Regressões do validador (NÃO é aceite físico)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Regressão de SHA, rótulos, travamento e gate restritivo
+        run: node tests/r571-ocr-corpus-release-gate-regression.mjs
+      - name: Declarar status da amostra real ausente
+        run: |
+          node scripts/evaluate-ocr-golden-corpus-r571.mjs --output .ci-reports/r571-ocr-status.json
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const result=JSON.parse(fs.readFileSync('.ci-reports/r571-ocr-status.json','utf8'));
+          if(result.corpusStatus!=='SEM_CORPUS_REAL') {
+            throw new Error('CI de contrato não pode simular corpus físico.');
+          }
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+            '### R571 — Somente teste do validador\n\n'+
+            '**Prints reais não disponíveis no CI. OCR físico: PENDENTE.**\n'+
+            'A homologação usa o mesmo APK assinado e o R532 após testes manuais.\n');
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r571-ocr-corpus-not-measured
+          path: .ci-reports/r571-ocr-status.json
+          if-no-files-found: warn
+          retention-days: 7
