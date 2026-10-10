@@ -1,0 +1,35 @@
+name: R564-R565 — Certificação de fichas
+
+on:
+  pull_request:
+    paths:
+      - "src/lib/cardPerformanceAuditR564.ts"
+      - "src/lib/buildComparisonR565.ts"
+      - "src/lib/trainingPlanCore.ts"
+      - "src/lib/analyzerDomain.ts"
+      - "tests/r564-r565-performance-certification-regression.ts"
+      - ".github/workflows/r564-r565-performance.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/lib/cardPerformanceAuditR564.ts"
+      - "src/lib/buildComparisonR565.ts"
+      - "tests/r564-r565-performance-certification-regression.ts"
+
+jobs:
+  evidence-and-budget:
+    name: Evidência, orçamento e comparações R564-R565
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Instalar dependências
+        run: npm ci --no-audit --no-fund
+      - name: Regressão R564-R565
+        run: node -r ./tests/_ts-require.cjs tests/r564-r565-performance-certification-regression.ts
