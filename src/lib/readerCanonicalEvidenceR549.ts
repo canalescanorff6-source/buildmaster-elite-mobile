@@ -17,7 +17,8 @@ export function extractReaderImpetoNameR549(value:string|null|undefined):ReaderC
 export function deriveReaderCanonicalEvidenceR549(fields:ReaderFieldLikeR549[]):ReaderCanonicalEvidenceR549{
  const uncertainKeys:Array<'skills'|'impeto'>=[];
  const skills=fields.find(field=>field.key==='skills'),impeto=fields.find(field=>field.key==='impeto');
- const parsed=skills&&!skills.error?extractCanonicalSkillsFromText(splitReaderV2SkillsR563(skills.value).native):[];
+ const split=skills&&!skills.error?splitReaderV2SkillsR563(skills.value):null;
+ const parsed=skills&&!skills.error?extractCanonicalSkillsFromText(split?.explicitlyLabeled?split.native:skills.value):[];
  const ordinary=parsed.filter(skill=>!isSpecialSkillIdentity(skill)),special=parsed.filter(isSpecialSkillIdentity);
  const skillValues=ordinary.length?ordinary:undefined,specialSkillValues=special.length?special:undefined;
  const impetoNames=impeto&&!impeto.error?extractReaderImpetoNamesR549(impeto.value):[];
