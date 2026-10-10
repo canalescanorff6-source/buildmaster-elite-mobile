@@ -1,4 +1,4 @@
-import type { AnalysisResult, TrainingPlan } from './analyzerDomain';
+import type { AnalysisResult, AttributeKey, TrainingPlan } from './analyzerDomain';
 import type { ManagerRecord } from './managers';
 import type { MatchValidationRecord } from './appStartupContractsR200';
 import { auditCardBuildR564 } from './cardPerformanceAuditR564';
@@ -53,7 +53,7 @@ export function buildFinalDecisionR570(input:{
   const card=result.parsed;
   const fingerprint=cardIdentityFingerprintR126(card);
   const base=verifiedTrainingBaseAttributes(card);
-  const confirmedKeys=base?Object.keys(base) as Array<keyof typeof base>:[];
+  const confirmedKeys: AttributeKey[]=base?Object.keys(base) as AttributeKey[]:[];
   const verifiedBase=!!base && confirmedKeys.length===26;
   const manualBudget=card.manualConfirmed===true && card.trainingPointSource==='MANUAL'
     && NUM(card.trainingPointsTotal)?card.trainingPointsTotal:null;
@@ -116,7 +116,7 @@ export function buildFinalDecisionR570(input:{
     },
     {
       key:'MANAGER',label:'Técnico e origem dos bônus',
-      status:manager && (managerProjection===null || managerProjection.status==='APLICADO')?'REVISAR':'REVISAR',
+      status:'REVISAR',
       detail:manager?manager.name+': '+(managerProjection?.note??'Bônus não mensurados neste perfil.')+
         ' Ativação de vínculos depende da escalação real.':'Técnico não selecionado nesta análise.',
     },
