@@ -21,7 +21,7 @@ import { celebratePremiumAction, setPremiumBusy, showPremiumToast } from '@/lib/
 import { classifyPremiumStatusR545 } from '@/modules/experience/statusToneR545';
 import type { CardVisionSettingsView, CardVisionVaultView, MainSection, PlayerWorkspace } from '@/lib/appNavigationR127';
 import type { CentralRecommendation } from '@/modules/core/centralIntelligence';
-import { AppCommandPalette, BuildMasterAssistant, CardVisionSettingsWorkspaceR190, CardVisionVaultWorkspaceR191, EfhubVisualCalibrator, IntegratedHomePanel, IntegratedTeamLab, MatchLaboratory, MetaFormationStudioV3832, OcrVisionCenter, PhasePlaystyleSelectorR124, PlayerLaboratory, PremiumMenuScreen, PremiumSearchScreen, ReaderImageSourceCardV4010, ReaderInterruptedCardV3840, ReaderLiveProgressCardV3840, ResultCard, ReviewPanel, SmartQuickDock, SquadMappingCenter, TeamFullMapPanel, TotalCardReaderPanel } from '@/components/lazy/CardVisionLazyPanelsR174';
+import { AppCommandPalette, BuildMasterAssistant, CardVisionSettingsWorkspaceR190, CardVisionVaultWorkspaceR191, EfhubVisualCalibrator, IntegratedHomePanel, IntegratedTeamLab, MatchLaboratory, MetaFormationStudioV3832, OcrVisionCenter, PhasePlaystyleSelectorR124, PlayerLaboratory, PremiumMenuScreen, PremiumSearchScreen, PreFinalCardReviewR548, ReaderImageSourceCardV4010, ReaderInterruptedCardV3840, ReaderLiveProgressCardV3840, ResultCard, ReviewPanel, SmartQuickDock, SquadMappingCenter, TeamFullMapPanel, TotalCardReaderPanel } from '@/components/lazy/CardVisionLazyPanelsR174';
 import { CalibrationProfileFields, EfootballV600PreviewV4070, ManagerSelectionField, UnifiedCreationFlowV3790, UnifiedCreationResumeCardV3790 } from '@/components/lazy/CardVisionConditionalFieldsR179';
 import { ONBOARDING_STORAGE_KEY, type OnboardingProfile } from '@/lib/appStartupContractsR200';
 import type { TotalReadingSession } from '@/lib/totalCardReader';
@@ -72,10 +72,10 @@ import { createDefaultVaultFilterStateR151, type CardVisionHistoryFilterR151, ty
 import { useCardVisionVaultCoordinatorR153 } from '@/modules/vault/useCardVisionVaultCoordinatorR153';
 import { CardVisionAppChromeR185 } from '@/components/CardVisionAppChromeR185';
 import { PremiumBrand } from '@/components/PremiumBrand';
-import { PreFinalCardReviewR548 } from '@/components/PreFinalCardReviewR548';
 import type { ReaderV2PreFinalConfirmation } from '@/modules/card-reader-v2/readerV2Review';
 import { FORMATION_SELECTION_OPTIONS_R191, SETTINGS_COMMANDS_R195 } from '@/modules/experience/cardVisionShellCatalogR191';
 import { persistMyTeamFormationR572, readMyTeamFormationR572, normalizeMyTeamFormationR572 } from '@/lib/myTeamFormationPreferenceR572';
+import { readMyTeamLayoutsR573, persistMyTeamLayoutsR573, sanitizeManualLayoutR573, type ManualTeamLayoutR573, type ManualTeamLayoutsR573 } from '@/lib/manualTeamEditorR573';
 type ReaderCaptureMode = 'single' | 'complete';
 
 // Perfis manuais antigos são migrados para o reconhecimento automático da carta.
@@ -174,6 +174,46 @@ export function CardVisionApp() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [sessionSaveState, setSessionSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [sessionHydrated, setSessionHydrated] = useState(false);
+  const [myTeamLayoutsR573, setMyTeamLayoutsR573] = useState<ManualTeamLayoutsR573>({});
+  useEffect(() => {
+    if (!sessionHydrated || startupSafeMode) return;
+    setMyTeamLayoutsR573(readMyTeamLayoutsR573());
+  }, [sessionHydrated, startupSafeMode, account?.profile.id]);
+  const activeManualFormationR573 = formation === 'AUTO' ? '4-2-2-2' : formation;
+  const activeManualLayoutR573 = myTeamLayoutsR573[activeManualFormationR573] ?? null;
+  function importManualTeamLayoutR573(nextFormation: TacticalFormation, rawLayout: unknown, hasLayout: boolean) {
+    const normalized = normalizeMyTeamFormationR572(nextFormation);
+    const formationId = normalized === 'AUTO' ? '4-2-2-2' : normalized;
+    const blueprint = FORMATION_BLUEPRINTS.find(item => item.id === formationId);
+    if (!normalized || !blueprint) return false;
+    if (hasLayout && rawLayout !== null) {
+      if (!rawLayout || typeof rawLayout !== 'object' || Array.isArray(rawLayout)) return false;
+      const candidate = rawLayout as Partial<ManualTeamLayoutR573>;
+      if (candidate.version !== 1 || candidate.formation !== blueprint.id) return false;
+    }
+    chooseMyTeamFormationR572(normalized);
+    if (hasLayout) {
+      const layouts = {...myTeamLayoutsR573};
+      if (rawLayout) layouts[blueprint.id] = sanitizeManualLayoutR573(blueprint, rawLayout);
+      else delete layouts[blueprint.id];
+      setMyTeamLayoutsR573(layouts);
+      if (sessionHydrated && !startupSafeMode && !persistMyTeamLayoutsR573(layouts)) {
+        setStatus('Time importado, mas não foi possível guardar a escalação manual no dispositivo.');
+      }
+    }
+    return true;
+  }
+  function editManualTeamLayoutR573(next: ManualTeamLayoutR573 | null) {
+    const blueprint = FORMATION_BLUEPRINTS.find(item => item.id === activeManualFormationR573);
+    if (!blueprint) return;
+    const layouts = {...myTeamLayoutsR573};
+    if (next) layouts[blueprint.id] = sanitizeManualLayoutR573(blueprint,next);
+    else delete layouts[blueprint.id];
+    setMyTeamLayoutsR573(layouts);
+    if (!startupSafeMode && sessionHydrated && !persistMyTeamLayoutsR573(layouts))
+      setStatus('Ajuste do time aplicado, mas não foi possível salvar no dispositivo.');
+  }
+
   const deferredStartupReadyR155 = useDeferredStartupReadyR155(startupGateReady && sessionHydrated && !startupSafeMode);
   const backgroundResumeStartedRef = useRef(false);
   const [pendingBackgroundCheckpoint, setPendingBackgroundCheckpoint] = useState<BackgroundOcrCheckpoint | null>(null);
@@ -322,6 +362,7 @@ export function CardVisionApp() {
     renderHistory,
     formation,
     teamStyle,
+    manualLayout: activeManualLayoutR573,
     performanceMode,
     startupGateReady,
     startupSafeMode,
@@ -1058,7 +1099,7 @@ export function CardVisionApp() {
       {mainSection === 'time' && (
         <SectionErrorBoundary area="meu-time-completo">
           <section className="bm-v34-team-workspace bm-r526-tactics" aria-label="Meu Time">
-            <IntegratedTeamLab team={integratedTeam} selectedFormation={formation} players={integratedPlayers} records={centralMatchRecords} teamStyle={teamStyle} selectedManager={selectedManager}
+            <IntegratedTeamLab team={integratedTeam} selectedFormation={formation} manualLayout={activeManualLayoutR573} onManualLayoutChange={editManualTeamLayoutR573} onImportTeamLayout={importManualTeamLayoutR573} players={integratedPlayers} records={centralMatchRecords} teamStyle={teamStyle} selectedManager={selectedManager}
               onOpenFormationLab={() => { setTeamAdvancedOpen(true); window.requestAnimationFrame(() => document.querySelector<HTMLDetailsElement>('.bm-v34-team-advanced')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}
               onPrepareMatch={() => openMainSection('partidas')}
               onFormationChange={chooseMyTeamFormationR572} />

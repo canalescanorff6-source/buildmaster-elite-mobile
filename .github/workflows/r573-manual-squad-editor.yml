@@ -1,0 +1,35 @@
+name: R573 — Editor manual de jogadores e posições
+on:
+  pull_request:
+    paths:
+      - 'src/lib/manualTeamEditorR573.ts'
+      - 'src/modules/squad/ManualPitchEditorR573.tsx'
+      - 'src/modules/squad/IntegratedTeamLab.tsx'
+      - 'src/modules/core/centralIntelligence.ts'
+      - 'src/modules/core/centralSafeViewR130.ts'
+      - 'src/hooks/useCardVisionCentralWorkspaceR175.ts'
+      - 'src/components/CardVisionApp.tsx'
+      - 'tests/r573-manual-squad-position-editor-regression.ts'
+      - '.github/workflows/r573-manual-squad-editor.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/lib/manualTeamEditorR573.ts'
+      - 'tests/r573-manual-squad-position-editor-regression.ts'
+jobs:
+  manual-formation:
+    name: Titulares manuais, edição por toque e sem duplicação
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: node -r ./tests/_ts-require.cjs tests/r573-manual-squad-position-editor-regression.ts
+      - name: Validar TypeScript do aplicativo completo
+        run: npx --no-install tsc --noEmit
+      - name: Reproduzir verificação estrita R151 do CI geral
+        run: npm run typecheck:r151

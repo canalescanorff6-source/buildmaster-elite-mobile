@@ -22,6 +22,8 @@ export const DelayResponsePanel = dynamic(() => import('@/components/Development
 export const EfhubVisualCalibrator = dynamic(() => import('@/components/EfhubVisualCalibrator').then((module) => module.EfhubVisualCalibrator), { ssr: false, loading: fallback });
 export const FirstUseOnboarding = dynamic(() => import('@/components/FirstUseOnboarding').then((module) => module.FirstUseOnboarding), { ssr: false, loading: fallback });
 export const IdentityAppearancePanel = dynamic(() => import('@/components/IdentityAppearancePanel').then((module) => module.IdentityAppearancePanel), { ssr: false, loading: fallback });
+// Pré-final do OCR só entra em memória após a leitura, preservando a closure R200.
+export const PreFinalCardReviewR548 = dynamic(() => import('@/components/PreFinalCardReviewR548').then((module) => module.PreFinalCardReviewR548), { ssr: false, loading: fallback });
 export const IntegratedHomePanel = dynamic(() => import('@/modules/core/IntegratedHomePanel').then((module) => module.IntegratedHomePanel), { ssr: false, loading: fallback });
 export const IntegratedTeamLab = dynamic(() => import('@/modules/squad/IntegratedTeamLab').then((module) => module.IntegratedTeamLab), { ssr: false, loading: fallback });
 export const MatchLaboratory = dynamic(() => import('@/modules/matches/MatchLaboratory').then((module) => module.MatchLaboratory), { ssr: false, loading: fallback });

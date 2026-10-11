@@ -37,8 +37,10 @@ const parent=readFileSync('src/components/CardVisionApp.tsx','utf8');
 assert.match(myTeam,/aria-label="Escolher formação do Meu Time"/);
 assert.match(myTeam,/value=\{selectedFormation\}/);
 assert.match(myTeam,/onFormationChange\(event\.target\.value as TacticalFormation\)/);
-assert.ok(myTeam.indexOf('bm32-team-formation-picker')<myTeam.indexOf('bm32-team-pitch-panel'),
-  'Seletor deve aparecer na área principal, antes do campo.');
+const pitchEditor=readFileSync('src/modules/squad/ManualPitchEditorR573.tsx','utf8');
+assert.match(pitchEditor,/bm32-team-pitch-panel/);
+assert.ok(myTeam.indexOf('bm32-team-formation-picker')<myTeam.indexOf('<ManualPitchEditorR573'),
+  'Seletor deve permanecer na tela principal antes do componente de campo.');
 assert.match(myTeam,/setDefenseMappingR566\(\{\}\)/,'Mudança estrutural invalida mapeamento fluido antigo.');
 assert.match(parent,/selectedFormation=\{formation\}/);
 assert.match(parent,/readMyTeamFormationR572\(\)/);

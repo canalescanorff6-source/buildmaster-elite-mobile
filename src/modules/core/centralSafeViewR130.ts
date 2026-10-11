@@ -1,4 +1,5 @@
 import type { TacticalFormation, TacticalStyle } from '../../lib/analyzerDomain';
+import type { ManualTeamLayoutR573 } from '../../lib/manualTeamEditorR573';
 import type { MatchValidationRecord } from '../../lib/appEvolution';
 import { recordSafeRuntimeError } from '../../lib/safeDiagnostics';
 import {
@@ -28,9 +29,9 @@ export function safeIntegratedPlayersR130(inputs: CentralPlayerInput[], matches:
   return records.sort((a, b) => Number(b.favorite) - Number(a.favorite) || b.updatedAt.localeCompare(a.updatedAt));
 }
 
-export function safeTeamDiagnosisR130(players: IntegratedPlayerRecord[], formation: TacticalFormation, style: TacticalStyle): TeamDiagnosis {
+export function safeTeamDiagnosisR130(players: IntegratedPlayerRecord[], formation: TacticalFormation, style: TacticalStyle, manualLayout?: ManualTeamLayoutR573 | null): TeamDiagnosis {
   try {
-    return buildTeamDiagnosis(players, formation, style);
+    return buildTeamDiagnosis(players, formation, style, manualLayout);
   } catch (cause) {
     void recordSafeRuntimeError({ area: 'team-diagnosis', code: 'diagnosis_failed', message: cause instanceof Error ? cause.message : 'Falha ao calcular diagnóstico do time' });
     return buildTeamDiagnosis([], formation, style);
