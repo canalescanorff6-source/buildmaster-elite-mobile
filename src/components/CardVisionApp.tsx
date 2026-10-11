@@ -182,6 +182,28 @@ export function CardVisionApp() {
   }, [sessionHydrated, startupSafeMode, account?.profile.id]);
   const activeManualFormationR573 = formation === 'AUTO' ? '4-2-2-2' : formation;
   const activeManualLayoutR573 = myTeamLayoutsR573[activeManualFormationR573] ?? null;
+  function importManualTeamLayoutR573(nextFormation: TacticalFormation, rawLayout: unknown, hasLayout: boolean) {
+    const normalized = normalizeMyTeamFormationR572(nextFormation);
+    const formationId = normalized === 'AUTO' ? '4-2-2-2' : normalized;
+    const blueprint = FORMATION_BLUEPRINTS.find(item => item.id === formationId);
+    if (!normalized || !blueprint) return false;
+    if (hasLayout && rawLayout !== null) {
+      if (!rawLayout || typeof rawLayout !== 'object' || Array.isArray(rawLayout)) return false;
+      const candidate = rawLayout as Partial<ManualTeamLayoutR573>;
+      if (candidate.version !== 1 || candidate.formation !== blueprint.id) return false;
+    }
+    chooseMyTeamFormationR572(normalized);
+    if (hasLayout) {
+      const layouts = {...myTeamLayoutsR573};
+      if (rawLayout) layouts[blueprint.id] = sanitizeManualLayoutR573(blueprint, rawLayout);
+      else delete layouts[blueprint.id];
+      setMyTeamLayoutsR573(layouts);
+      if (sessionHydrated && !startupSafeMode && !persistMyTeamLayoutsR573(layouts)) {
+        setStatus('Time importado, mas não foi possível guardar a escalação manual no dispositivo.');
+      }
+    }
+    return true;
+  }
   function editManualTeamLayoutR573(next: ManualTeamLayoutR573 | null) {
     const blueprint = FORMATION_BLUEPRINTS.find(item => item.id === activeManualFormationR573);
     if (!blueprint) return;
@@ -1078,7 +1100,7 @@ export function CardVisionApp() {
       {mainSection === 'time' && (
         <SectionErrorBoundary area="meu-time-completo">
           <section className="bm-v34-team-workspace bm-r526-tactics" aria-label="Meu Time">
-            <IntegratedTeamLab team={integratedTeam} selectedFormation={formation} manualLayout={activeManualLayoutR573} onManualLayoutChange={editManualTeamLayoutR573} players={integratedPlayers} records={centralMatchRecords} teamStyle={teamStyle} selectedManager={selectedManager}
+            <IntegratedTeamLab team={integratedTeam} selectedFormation={formation} manualLayout={activeManualLayoutR573} onManualLayoutChange={editManualTeamLayoutR573} onImportTeamLayout={importManualTeamLayoutR573} players={integratedPlayers} records={centralMatchRecords} teamStyle={teamStyle} selectedManager={selectedManager}
               onOpenFormationLab={() => { setTeamAdvancedOpen(true); window.requestAnimationFrame(() => document.querySelector<HTMLDetailsElement>('.bm-v34-team-advanced')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}
               onPrepareMatch={() => openMainSection('partidas')}
               onFormationChange={chooseMyTeamFormationR572} />
