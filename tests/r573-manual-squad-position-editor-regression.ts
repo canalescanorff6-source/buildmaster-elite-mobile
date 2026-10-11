@@ -93,6 +93,10 @@ assert.match(ui,/assignManualStarterR573/);
 assert.match(ui,/positionOverrides/);
 assert.match(ui,/Restaurar escalação automática/);
 assert.match(squad,/<ManualPitchEditorR573/);
+assert.match(squad,/starterIds\.has\(player\.fingerprint\)/,'Bench must distinguish different card editions with the same player name.');
+assert.match(squad,/cardFingerprint: fit\.player/);
+assert.doesNotMatch(squad,/playerByName\.get\(fit\.player\.parsed\.playerName\)/,'Tactical identity must not use same-name lookup.');
+
 assert.match(app,/persistMyTeamLayoutsR573\(layouts\)/);
 assert.match(app,/manualLayout: activeManualLayoutR573/);
 assert.match(app,/onManualLayoutChange=\{editManualTeamLayoutR573\}/);
