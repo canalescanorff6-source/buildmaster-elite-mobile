@@ -75,6 +75,7 @@ import { PremiumBrand } from '@/components/PremiumBrand';
 import { PreFinalCardReviewR548 } from '@/components/PreFinalCardReviewR548';
 import type { ReaderV2PreFinalConfirmation } from '@/modules/card-reader-v2/readerV2Review';
 import { FORMATION_SELECTION_OPTIONS_R191, SETTINGS_COMMANDS_R195 } from '@/modules/experience/cardVisionShellCatalogR191';
+import { persistMyTeamFormationR572, readMyTeamFormationR572, normalizeMyTeamFormationR572 } from '@/lib/myTeamFormationPreferenceR572';
 type ReaderCaptureMode = 'single' | 'complete';
 
 // Perfis manuais antigos são migrados para o reconhecimento automático da carta.
@@ -558,10 +559,32 @@ export function CardVisionApp() {
     markSessionRestored: () => { restoredSessionRef.current = true; },
     setProfileAvatar, setStatus, setSessionHydrated,
   });
+  // Keep the My Team formation independent of an unfinished card-reader draft.
+  // The preference is account-scoped and cannot alter any saved player data.
+  useEffect(() => {
+    if (!sessionHydrated || startupSafeMode) return;
+    const saved = readMyTeamFormationR572();
+    if (saved) setFormation(saved);
+  }, [sessionHydrated, startupSafeMode, account?.profile.id]);
+
+  function chooseMyTeamFormationR572(next: TacticalFormation) {
+    const selected = normalizeMyTeamFormationR572(next);
+    if (!selected) {
+      setStatus('Formação não reconhecida. A escalação atual foi preservada.');
+      return;
+    }
+    setFormation(selected);
+    const saved = persistMyTeamFormationR572(selected);
+    setStatus(selected === 'AUTO'
+      ? 'Formação automática selecionada. Meu Time recalculado sem modificar as fichas do Cofre.'
+      : `Formação ${selected} selecionada. Meu Time recalculado com as cartas do Cofre sem alterar suas fichas.` +
+        (saved ? ' Preferência salva.' : ' Preferência em memória; não foi possível salvar no dispositivo.'));
+  }
+
   function completeOnboarding(profile: OnboardingProfile) {
     setOnboardingProfile(profile);
     setAdvancedMode(profile.experienceMode === 'advanced');
-    setFormation(profile.favoriteFormation);
+    chooseMyTeamFormationR572(profile.favoriteFormation);
     setTeamStyle(profile.teamStyle);
     setOnboardingOpen(false);
     try { writeAccountStorage(ONBOARDING_STORAGE_KEY, JSON.stringify(profile)); } catch {}
@@ -1035,16 +1058,16 @@ export function CardVisionApp() {
       {mainSection === 'time' && (
         <SectionErrorBoundary area="meu-time-completo">
           <section className="bm-v34-team-workspace bm-r526-tactics" aria-label="Meu Time">
-            <IntegratedTeamLab team={integratedTeam} players={integratedPlayers} records={centralMatchRecords} teamStyle={teamStyle} selectedManager={selectedManager}
+            <IntegratedTeamLab team={integratedTeam} selectedFormation={formation} players={integratedPlayers} records={centralMatchRecords} teamStyle={teamStyle} selectedManager={selectedManager}
               onOpenFormationLab={() => { setTeamAdvancedOpen(true); window.requestAnimationFrame(() => document.querySelector<HTMLDetailsElement>('.bm-v34-team-advanced')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}
               onPrepareMatch={() => openMainSection('partidas')}
-              onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada. A posição escolhida de cada jogador foi preservada.`); }} />
+              onFormationChange={chooseMyTeamFormationR572} />
             <details className="bm-v34-team-advanced luxury-panel" open={teamAdvancedOpen} onToggle={(event) => setTeamAdvancedOpen(event.currentTarget.open)}>
               <summary><span><SlidersHorizontal size={18}/><strong>Opções do time</strong></span><small>Formação e técnico</small></summary>
               {teamAdvancedOpen && (
                 <div className="bm-v34-team-advanced-body">
                   <div className="select-stack">
-                    <label><span>Sistema tático</span><select value={formation} onChange={(event) => setFormation(event.target.value as TacticalFormation)}>{formationSelectionOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+                    <label><span>Sistema tático</span><select value={formation} onChange={(event) => chooseMyTeamFormationR572(event.target.value as TacticalFormation)}>{formationSelectionOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
                     <label><span>Modelo de jogo</span><select value={teamStyle} onChange={(event) => setTeamStyle(event.target.value as TacticalStyle)}>{tacticalStyles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
                     <ManagerSelectionField value={managerId} onChange={(nextId, primaryStyle) => { setManagerId(nextId); if (primaryStyle) setTeamStyle(primaryStyle); }} />
                   </div>
@@ -1053,7 +1076,7 @@ export function CardVisionApp() {
                     {selectedFormationGuide ? <><div className="guide-highlight"><span>Melhor estilo</span><strong>{tacticalStyleName[selectedFormationGuide.bestStyle]}</strong><em>{selectedFormationGuide.styleReason}</em></div><p>{selectedFormationGuide.howToPlay}</p><div className="role-chip-grid">{selectedFormationGuide.roles.map((role) => <span key={role}>{role}</span>)}</div></> : <p>Selecione uma formação para abrir o guia correspondente.</p>}
                   </article>
                   <SectionErrorBoundary area="meu-time-avancado">
-                    <TeamFullMapPanel history={renderHistory} formation={formation} teamStyle={teamStyle} onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada pela Central Profissional.`); }} />
+                    <TeamFullMapPanel history={renderHistory} formation={formation} teamStyle={teamStyle} onFormationChange={chooseMyTeamFormationR572} />
                   </SectionErrorBoundary>
                 </div>
               )}

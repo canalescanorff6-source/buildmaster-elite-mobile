@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -44,6 +44,7 @@ type TeamTab = 'escalacao' | 'elenco' | 'tatica' | 'banco';
 
 type Props = {
   team: TeamDiagnosis;
+  selectedFormation: TacticalFormation;
   players: IntegratedPlayerRecord[];
   records: MatchValidationRecord[];
   teamStyle: TacticalStyle;
@@ -73,7 +74,7 @@ function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toLocaleUpperCase('pt-BR')).join('') || '?';
 }
 
-export function IntegratedTeamLab({ team, players, records, teamStyle, selectedManager, onOpenFormationLab, onPrepareMatch, onFormationChange }: Props) {
+export function IntegratedTeamLab({ team, selectedFormation, players, records, teamStyle, selectedManager, onOpenFormationLab, onPrepareMatch, onFormationChange }: Props) {
   const [tab, setTab] = useState<TeamTab>('escalacao');
   const [gameMode, setGameMode] = useState(false);
   const [savedNotice, setSavedNotice] = useState('');
@@ -83,6 +84,8 @@ export function IntegratedTeamLab({ team, players, records, teamStyle, selectedM
   const [comparisonFormation, setComparisonFormation] = useState<TacticalFormation>('4-3-3');
   const [defenseFormationR566, setDefenseFormationR566] = useState<TacticalFormation>('4-4-2');
   const [defenseMappingR566, setDefenseMappingR566] = useState<Record<string, string>>({});
+  // Any structural change invalidates a prior manual assignment of defense slots.
+  useEffect(() => { setDefenseMappingR566({}); }, [team.formation]);
   const lineupSignatureR562 = [team.formation, teamStyle, selectedManager?.id ?? 'PENDENTE',
     ...team.lineup.map(fit => fit.slot.id + ':' + (fit.player ? cardIdentityFingerprintR126(fit.player.parsed) : 'VAZIO'))
   ].join('|');
@@ -196,6 +199,41 @@ export function IntegratedTeamLab({ team, players, records, teamStyle, selectedM
         <div><h1>Meu Time</h1><p>Escalação, funções e plano de jogo.</p></div>
         <span className="bm32-elite-badge"><Crown size={17}/> ELITE</span>
       </header>
+
+      <article className="luxury-panel bm32-team-formation-picker" aria-label="Escolher formação do Meu Time"
+        style={{display:'flex',flexWrap:'wrap',alignItems:'center',gap:14,
+          justifyContent:'space-between',padding:'14px 16px'}}>
+        <div style={{flex:'1 1 200px'}}>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <Layers size={20}/><strong>Escolher formação</strong>
+          </div>
+          <small>Troque o esquema aqui. Os titulares e os encaixes serão recalculados com suas cartas, sem modificar o Cofre.</small>
+        </div>
+        <label htmlFor="r572-my-team-formation" style={{display:'grid',gap:6,flex:'1 1 230px',minWidth:0}}>
+          <span>Formação com a bola</span>
+          <select id="r572-my-team-formation" aria-label="Escolher formação do Meu Time"
+            value={selectedFormation}
+            style={{width:'100%',maxWidth:'100%',padding:'10px',borderRadius:10}}
+            onChange={(event) => onFormationChange(event.target.value as TacticalFormation)}>
+            <option value="AUTO">{`Automática (atual: ${team.formation})`}</option>
+            <optgroup label="Jogo central — sem pontas ou meias abertos">
+              {FORMATION_BLUEPRINTS.filter(item => !item.slots.some(slot =>
+                ['LWF','RWF','LMF','RMF'].includes(slot.position)
+              )).map(item => (
+                <option key={item.id} value={item.id}>{item.name}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Outras formações — com amplitude">
+              {FORMATION_BLUEPRINTS.filter(item => item.slots.some(slot =>
+                ['LWF','RWF','LMF','RMF'].includes(slot.position)
+              )).map(item => (
+                <option key={item.id} value={item.id}>{item.name}</option>
+              ))}
+            </optgroup>
+          </select>
+          <small>Em campo: <strong>{team.formation}</strong>{selectedFormation === 'AUTO' ? ' • modo automático' : ' • escolha manual salva'}</small>
+        </label>
+      </article>
 
       <section className="bm32-team-metrics">
         <article><span>ESTILO DO TÉCNICO</span><strong>{teamStyleLabel(teamStyle)}</strong><small>{team.styleFit}% de compatibilidade</small></article>
