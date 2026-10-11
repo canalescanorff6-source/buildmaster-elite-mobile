@@ -102,10 +102,13 @@ assert.match(app,/manualLayout: activeManualLayoutR573/);
 assert.match(app,/onManualLayoutChange=\{editManualTeamLayoutR573\}/);
 assert.match(app,/onImportTeamLayout=\{importManualTeamLayoutR573\}/);
 // R573 must not regress the R200 initial bundle after adding the manual editor.
-assert.match(app,/const PreFinalCardReviewR548 = lazy\(/,'Final OCR review must remain deferred until needed.');
-assert.doesNotMatch(app,/^import\s+\{\s*PreFinalCardReviewR548\s*\}\s+from\s+/m,
-  'OCR confirmation UI cannot be in the synchronous app startup dependency graph.');
-assert.match(app,/<Suspense fallback=\{<div role="status"/,'Deferred review must expose accessible progress.');
+const lazyPanels=readFileSync('src/components/lazy/CardVisionLazyPanelsR174.tsx','utf8');
+assert.match(app,/PremiumSearchScreen, PreFinalCardReviewR548, ReaderImageSourceCardV4010/,
+  'App must consume the already-lazy panels export.');
+assert.doesNotMatch(app,/^import\s+\{\s*PreFinalCardReviewR548\s*\}\s+from\s+['"]@\/components\/PreFinalCardReviewR548/m,
+  'Final OCR review cannot be imported eagerly at app startup.');
+assert.match(lazyPanels,/PreFinalCardReviewR548 = dynamic\(\(\) => import\(['"]@\/components\/PreFinalCardReviewR548['"]\)/,
+  'Final OCR review must load on demand, with the standard accessible loading component.');
 assert.match(squad,/onImportTeamLayout\(parsed\.formation,parsed\.manualLayout/);
 assert.match(squad,/hasLayout=parsed\.version===2/);
 
