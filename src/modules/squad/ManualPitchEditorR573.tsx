@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type KeyboardEvent } from 'react';
-import { Grip, RotateCcw, Save, Settings2 } from 'lucide-react';
+import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { RotateCcw, Save, Settings2 } from 'lucide-react';
 import type { TeamDiagnosis, IntegratedPlayerRecord } from '@/modules/core/centralIntelligence';
 import type { ManualTeamLayoutR573, ManualPointR573 } from '@/lib/manualTeamEditorR573';
 import {
@@ -76,7 +76,7 @@ export function ManualPitchEditorR573({team,players,manualLayout,onManualLayoutC
     if(!cancel && (Math.abs(current.last.x-current.start.x)>.4 || Math.abs(current.last.y-current.start.y)>.4))
       move(current.id,current.last);
   }
-  function onKey(event:KeyboardEvent<HTMLButtonElement>,id:string,origin:ManualPointR573){
+  function onKey(event:{key:string;preventDefault():void},id:string,origin:ManualPointR573){
     if(!editing)return;
     const delta:Record<string,[number,number]>={
       ArrowLeft:[-2,0],ArrowRight:[2,0],ArrowUp:[0,-2],ArrowDown:[0,2]
@@ -126,7 +126,7 @@ export function ManualPitchEditorR573({team,players,manualLayout,onManualLayoutC
             <strong>{fit.slot.label}</strong>
             <small>{name||'Sem encaixe'}</small>
             <i>{record?.playstyle||fit.slot.primaryRoles[0]}</i>
-            {editing&&<Grip size={14} aria-hidden="true" />}
+            {editing&&<span aria-hidden="true" title="Arraste para mover">↕</span>}
           </button>;
         })}
         <span className="bm32-reserve-count">Reservas {reserves.length}/5</span>
