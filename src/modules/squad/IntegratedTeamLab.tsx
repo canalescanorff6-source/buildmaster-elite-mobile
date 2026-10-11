@@ -49,6 +49,7 @@ type Props = {
   selectedFormation: TacticalFormation;
   manualLayout: ManualTeamLayoutR573 | null;
   onManualLayoutChange: (next:ManualTeamLayoutR573 | null)=>void;
+  onImportTeamLayout: (formation:TacticalFormation, layout:unknown, hasLayout:boolean)=>boolean;
   players: IntegratedPlayerRecord[];
   records: MatchValidationRecord[];
   teamStyle: TacticalStyle;
@@ -78,7 +79,7 @@ function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toLocaleUpperCase('pt-BR')).join('') || '?';
 }
 
-export function IntegratedTeamLab({ team, selectedFormation, manualLayout, onManualLayoutChange, players, records, teamStyle, selectedManager, onOpenFormationLab, onPrepareMatch, onFormationChange }: Props) {
+export function IntegratedTeamLab({ team, selectedFormation, manualLayout, onManualLayoutChange, onImportTeamLayout, players, records, teamStyle, selectedManager, onOpenFormationLab, onPrepareMatch, onFormationChange }: Props) {
   const [tab, setTab] = useState<TeamTab>('escalacao');
   const [gameMode, setGameMode] = useState(false);
   const [savedNotice, setSavedNotice] = useState('');
@@ -187,10 +188,16 @@ export function IntegratedTeamLab({ team, selectedFormation, manualLayout, onMan
     if (!file) return;
     try {
       if (file.size > 5 * 1024 * 1024) throw new Error('Arquivo acima de 5 MB.');
-      const parsed = JSON.parse(await file.text()) as { kind?: string; formation?: TacticalFormation };
-      if (parsed.kind !== 'buildmaster-team' || !parsed.formation || !formationOptions.includes(parsed.formation)) throw new Error('Arquivo de time não reconhecido.');
-      onFormationChange(parsed.formation);
-      setSavedNotice(`Formação ${parsed.formation} importada. Os jogadores foram recalculados com o Cofre atual.`);
+      const parsed = JSON.parse(await file.text()) as {
+        kind?: string; version?: number; formation?: TacticalFormation; manualLayout?: unknown;
+      };
+      if (parsed.kind !== 'buildmaster-team' || !parsed.formation ||
+        !formationOptions.includes(parsed.formation) || ![1,2].includes(parsed.version??1))
+        throw new Error('Arquivo de time não reconhecido.');
+      const hasLayout=parsed.version===2 && Object.prototype.hasOwnProperty.call(parsed,'manualLayout');
+      if (!onImportTeamLayout(parsed.formation,parsed.manualLayout??null,hasLayout))
+        throw new Error('Layout manual inválido ou pertencente a outra formação.');
+      setSavedNotice(`Formação ${parsed.formation} e escalação compatível importadas. Cartas ausentes serão revisadas, nunca inventadas.`);
     } catch (cause) {
       setSavedNotice(cause instanceof Error ? cause.message : 'Não foi possível importar o time.');
     }
