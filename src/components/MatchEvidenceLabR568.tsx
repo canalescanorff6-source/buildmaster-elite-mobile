@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ChangeEvent } from 'react';
 import type { MatchValidationRecord } from '@/lib/appEvolution';
 import {
   MATCH_METRICS_R568, evaluateMatchEvidenceR568, listMatchEvidenceContextsR568,
@@ -23,7 +23,7 @@ export function MatchEvidenceLabR568({ records }: { records: readonly MatchValid
         na mesma edição da carta, função, formação, estilo, versão do jogo, modalidade e conexão.</p>
       <div className="professional-match-context-grid">
         <label><span>Contexto controlado</span>
-          <select aria-label="Contexto experimental R568" value={contextKey} onChange={e => setContextKey(e.target.value)}>
+          <select aria-label="Contexto experimental R568" value={contextKey} onChange={(e: ChangeEvent<HTMLSelectElement>) => setContextKey(e.target.value)}>
             <option value="">Escolher contexto — não selecionar automaticamente</option>
             {contexts.map(x => <option key={x.key} value={x.key}>
               {x.label} • A {x.armA} / B {x.armB}
@@ -32,7 +32,7 @@ export function MatchEvidenceLabR568({ records }: { records: readonly MatchValid
         </label>
         <label><span>Métrica individual observada</span>
           <select aria-label="Métrica experimental R568" value={metric}
-            onChange={e => setMetric(e.target.value as MatchMetricR568)}>
+            onChange={(e: ChangeEvent<HTMLSelectElement>) => setMetric(e.target.value as MatchMetricR568)}>
             {MATCH_METRICS_R568.map(x => <option key={x.key} value={x.key}>{x.label}</option>)}
           </select>
         </label>

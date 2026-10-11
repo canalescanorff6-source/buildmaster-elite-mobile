@@ -1,0 +1,34 @@
+name: R574 — Desbloqueio de release R534 (R568 e R152)
+on:
+  pull_request:
+    paths:
+      - 'src/components/MatchEvidenceLabR568.tsx'
+      - 'tests/v40-80-r152-interactive-source-regression.mjs'
+      - 'src/modules/squad/ManualPitchEditorR573.tsx'
+      - '.github/workflows/r574-r534-release-guards.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/components/MatchEvidenceLabR568.tsx'
+      - 'tests/v40-80-r152-interactive-source-regression.mjs'
+      - 'src/modules/squad/ManualPitchEditorR573.tsx'
+      - '.github/workflows/r574-r534-release-guards.yml'
+jobs:
+  r534-release-guards:
+    name: TypeScript v37.60, botões R152 e editor R573
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Dependências verificadas
+        run: npm ci --no-audit --no-fund
+      - name: Reprodução estrita do TS7006 v37.60
+        run: npm run typecheck:v3760
+      - name: Proteção contra botões sem ação R152
+        run: node tests/v40-80-r152-interactive-source-regression.mjs
+      - name: Preservar escalação manual R573
+        run: node -r ./tests/_ts-require.cjs tests/r573-manual-squad-position-editor-regression.ts
