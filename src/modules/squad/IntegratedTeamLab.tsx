@@ -115,9 +115,10 @@ export function IntegratedTeamLab({ team, selectedFormation, manualLayout, onMan
     defenseFormation: defenseFormationR566,
     defenseSlotByAttackSlot: defenseMappingR566,
   }), [team, teamStyle, defenseFormationR566, defenseMappingR566]);
-  const playerByName = useMemo(() => new Map(players.map((player) => [player.name, player])), [players]);
-  const starterIds = useMemo(() => new Set(team.lineup.map((item) => item.player?.parsed.playerName).filter(Boolean)), [team.lineup]);
-  const reservePlayers = useMemo(() => players.filter((player) => !starterIds.has(player.name)).slice(0, 5), [players, starterIds]);
+  // A player can have multiple editions. Match the exact card fingerprint, never only its name.
+  const starterIds = useMemo(() => new Set(team.lineup.flatMap((fit) => fit.player
+    ? [cardIdentityFingerprintR126(fit.player.parsed)] : [])), [team.lineup]);
+  const reservePlayers = useMemo(() => players.filter((player) => !starterIds.has(player.fingerprint)).slice(0, 5), [players, starterIds]);
   const tacticalTwinR480 = useMemo(() => buildTacticalTwinR480({ team, players, records, teamStyle }), [team, players, records, teamStyle]);
   const squadBrainR481 = useMemo(() => buildSquadBrainR481({ team, players, records, twin: tacticalTwinR480 }), [team, players, records, tacticalTwinR480]);
   const chemistryR484 = useMemo(() => buildChemistryGraphR484({ team, players, records, teamStyle, squadBrain: squadBrainR481 }), [team, players, records, teamStyle, squadBrainR481]);
@@ -128,7 +129,7 @@ export function IntegratedTeamLab({ team, selectedFormation, manualLayout, onMan
     lineupContext: team.lineup.map((fit) => ({
       slotId: fit.slot.id,
       cardFingerprint: fit.player
-        ? playerByName.get(fit.player.parsed.playerName)?.fingerprint ?? fit.player.parsed.internalId ?? null
+        ? cardIdentityFingerprintR126(fit.player.parsed)
         : null
     })),
     tacticalTwin: tacticalTwinR480,
@@ -142,7 +143,7 @@ export function IntegratedTeamLab({ team, selectedFormation, manualLayout, onMan
     phase: 'PRE_MATCH',
     currentScenario: 'base',
     previousPlan: null
-  }), [team, teamStyle, playerByName, tacticalTwinR480, squadBrainR481, chemistryR484, records]);
+  }), [team, teamStyle, tacticalTwinR480, squadBrainR481, chemistryR484, records]);
 
   function selectTab(next: TeamTab) {
     setTab(next);
