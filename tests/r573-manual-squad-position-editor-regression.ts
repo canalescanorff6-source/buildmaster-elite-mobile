@@ -57,6 +57,15 @@ assert.equal(cardIdentityFingerprintR126(manual[1].player!.parsed),idA);
 assert.equal(new Set(manual.filter(f=>f.player).map(f=>cardIdentityFingerprintR126(f.player!.parsed))).size,
   manual.filter(f=>f.player).length,'No card edition can be selected twice.');
 assert.equal(JSON.stringify(players),original,'Assignments do not rewrite cards.');
+const moved=buildManualFormationLineupR573(players,formation,'POSSE_DE_BOLA',{
+  ...pinned,positions:{[first.id]:{x:21.4,y:29.6}},
+  positionOverrides:{[first.id]:first.alternatives[0]??first.position}
+});
+assert.equal(moved[0].slot.x,21.4);
+assert.equal(moved[0].slot.y,29.6);
+assert.equal(moved[0].slot.position,first.alternatives[0]??first.position);
+assert.equal(cardIdentityFingerprintR126(moved[0].player!.parsed),idB);
+
 const swapped=assignManualStarterR573(formation,pinned,manual,first.id,idA);
 assert.equal(swapped.assignments[first.id],idA);
 assert.equal(swapped.assignments[second.id],idB,'Choosing another titular swaps the positions.');
@@ -87,5 +96,9 @@ assert.match(squad,/<ManualPitchEditorR573/);
 assert.match(app,/persistMyTeamLayoutsR573\(layouts\)/);
 assert.match(app,/manualLayout: activeManualLayoutR573/);
 assert.match(app,/onManualLayoutChange=\{editManualTeamLayoutR573\}/);
+assert.match(app,/onImportTeamLayout=\{importManualTeamLayoutR573\}/);
+assert.match(squad,/onImportTeamLayout\(parsed\.formation,parsed\.manualLayout/);
+assert.match(squad,/hasLayout=parsed\.version===2/);
+
 assert.doesNotMatch(ui,/writeAccountStorage|setHistory\(/,'Editor must not write player records.');
 console.log('R573 GREEN: manual positions, swaps, unique editions, pitch dragging, account persistence and no vault mutation.');
