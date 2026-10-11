@@ -5,6 +5,7 @@ const palette = fs.readFileSync('src/components/AppCommandPalette.tsx', 'utf8');
 const appearance = fs.readFileSync('src/components/IdentityAppearancePanel.tsx', 'utf8');
 const formation = fs.readFileSync('src/components/FormationRoleLabPanel.tsx', 'utf8');
 const team = fs.readFileSync('src/modules/squad/IntegratedTeamLab.tsx', 'utf8');
+const manualPitch = fs.readFileSync('src/modules/squad/ManualPitchEditorR573.tsx', 'utf8');
 const checker = fs.readFileSync('scripts/check-interactive-contracts.mjs', 'utf8');
 
 const failures = [];
@@ -17,7 +18,17 @@ expect(!search.includes('const suggestions = commands.slice(0, 4)'), 'Primeiros 
 expect(palette.includes('recordRecentCommandR152(command.id)'), 'Paleta global também precisa alimentar o histórico recente.');
 expect(appearance.includes('appearance-preview-action') && !appearance.includes('<button type="button" tabIndex={-1}>Ação principal</button>'), 'Prévia de aparência deve ser visual, não botão morto.');
 expect(formation.includes('return <div key={pick.slot.id} className={`formation-pitch-slot'), 'Slots não interativos da formação devem usar elemento semântico não-botão.');
-expect(team.includes('<div className={`bm32-squad-card'), 'Cards estáticos da escalação não devem fingir ser botões.');
+// R573 replaced static squad cards with real, accessible position controls.
+const interactivePitchR573 = team.includes('<ManualPitchEditorR573')
+  && manualPitch.includes('return <button type="button" key={id}')
+  && manualPitch.includes('disabled={!editing}')
+  && manualPitch.includes('onPointerDown={e=>onDown(e,id')
+  && manualPitch.includes('onPointerMove={onMove}')
+  && manualPitch.includes('onPointerUp={e=>onEnd(e)}')
+  && manualPitch.includes('onKeyDown={e=>onKey(e,id')
+  && manualPitch.includes('aria-label={fit.slot.label');
+expect(interactivePitchR573,
+  'R573 deve usar cartões como botões somente com edição ativada, arraste, teclado e nome acessível.');
 expect(checker.includes('botão type="button" sem ação explícita'), 'Checker global precisa bloquear novos botões sem ação.');
 
 if (failures.length) {
