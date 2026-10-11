@@ -1,6 +1,6 @@
 'use client';
 // A Central de Backup é informativa e nunca pode impedir a abertura do app. BM_CARDVISION_LINE_BUDGET_R22
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Camera, CheckCircle2, Save, FileText, Layers, Trophy, Target, Clock3, SlidersHorizontal, Keyboard, Loader2, ScanText, ShieldCheck, Sparkles, Wand2, Zap, Ban } from 'lucide-react'; import { fetchWithTimeout } from '@/lib/fetchWithTimeout'; import { clearBuildMasterSession, useBuildMasterAccount } from '@/components/AuthGate';
 import { ATTRIBUTE_INPUTS, POSITION_LABELS, type AnalysisResult, type Objective, type PositionCode, type TacticalFormation, type TacticalProfile, type TacticalStyle, type GameplayMode, type ConnectionProfile, type ControlProfile } from '@/lib/analyzerDomain';
 import { DEFAULT_OCR_ZONES, type OcrZone } from '@/lib/ocrZonesModelR164';
@@ -21,7 +21,7 @@ import { celebratePremiumAction, setPremiumBusy, showPremiumToast } from '@/lib/
 import { classifyPremiumStatusR545 } from '@/modules/experience/statusToneR545';
 import type { CardVisionSettingsView, CardVisionVaultView, MainSection, PlayerWorkspace } from '@/lib/appNavigationR127';
 import type { CentralRecommendation } from '@/modules/core/centralIntelligence';
-import { AppCommandPalette, BuildMasterAssistant, CardVisionSettingsWorkspaceR190, CardVisionVaultWorkspaceR191, EfhubVisualCalibrator, IntegratedHomePanel, IntegratedTeamLab, MatchLaboratory, MetaFormationStudioV3832, OcrVisionCenter, PhasePlaystyleSelectorR124, PlayerLaboratory, PremiumMenuScreen, PremiumSearchScreen, ReaderImageSourceCardV4010, ReaderInterruptedCardV3840, ReaderLiveProgressCardV3840, ResultCard, ReviewPanel, SmartQuickDock, SquadMappingCenter, TeamFullMapPanel, TotalCardReaderPanel } from '@/components/lazy/CardVisionLazyPanelsR174';
+import { AppCommandPalette, BuildMasterAssistant, CardVisionSettingsWorkspaceR190, CardVisionVaultWorkspaceR191, EfhubVisualCalibrator, IntegratedHomePanel, IntegratedTeamLab, MatchLaboratory, MetaFormationStudioV3832, OcrVisionCenter, PhasePlaystyleSelectorR124, PlayerLaboratory, PremiumMenuScreen, PremiumSearchScreen, PreFinalCardReviewR548, ReaderImageSourceCardV4010, ReaderInterruptedCardV3840, ReaderLiveProgressCardV3840, ResultCard, ReviewPanel, SmartQuickDock, SquadMappingCenter, TeamFullMapPanel, TotalCardReaderPanel } from '@/components/lazy/CardVisionLazyPanelsR174';
 import { CalibrationProfileFields, EfootballV600PreviewV4070, ManagerSelectionField, UnifiedCreationFlowV3790, UnifiedCreationResumeCardV3790 } from '@/components/lazy/CardVisionConditionalFieldsR179';
 import { ONBOARDING_STORAGE_KEY, type OnboardingProfile } from '@/lib/appStartupContractsR200';
 import type { TotalReadingSession } from '@/lib/totalCardReader';
@@ -72,13 +72,10 @@ import { createDefaultVaultFilterStateR151, type CardVisionHistoryFilterR151, ty
 import { useCardVisionVaultCoordinatorR153 } from '@/modules/vault/useCardVisionVaultCoordinatorR153';
 import { CardVisionAppChromeR185 } from '@/components/CardVisionAppChromeR185';
 import { PremiumBrand } from '@/components/PremiumBrand';
-// Conferência só é carregada após a leitura, fora da closure inicial R200.
 import type { ReaderV2PreFinalConfirmation } from '@/modules/card-reader-v2/readerV2Review';
 import { FORMATION_SELECTION_OPTIONS_R191, SETTINGS_COMMANDS_R195 } from '@/modules/experience/cardVisionShellCatalogR191';
 import { persistMyTeamFormationR572, readMyTeamFormationR572, normalizeMyTeamFormationR572 } from '@/lib/myTeamFormationPreferenceR572';
 import { readMyTeamLayoutsR573, persistMyTeamLayoutsR573, sanitizeManualLayoutR573, type ManualTeamLayoutR573, type ManualTeamLayoutsR573 } from '@/lib/manualTeamEditorR573';
-const PreFinalCardReviewR548 = lazy(() => import('@/components/PreFinalCardReviewR548')
-  .then(({ PreFinalCardReviewR548: Component }) => ({ default: Component })));
 type ReaderCaptureMode = 'single' | 'complete';
 
 // Perfis manuais antigos são migrados para o reconhecimento automático da carta.
@@ -1520,7 +1517,6 @@ export function CardVisionApp() {
         <section className="preview-panel bm2820-preview-panel">
           {mainSection === 'resultado' ? (
             preFinalConfirmation ? (
-              <Suspense fallback={<div role="status" aria-live="polite" className="luxury-panel" style={{ padding: 18 }}>Preparando conferência da carta…</div>}>
               <PreFinalCardReviewR548
                 preFinalConfirmation={preFinalConfirmation} setPreFinalConfirmation={setPreFinalConfirmation}
                 manualFields={manualFields} setManualFields={setManualFields}
@@ -1530,7 +1526,6 @@ export function CardVisionApp() {
                 onCompleted={() => setPreFinalConfirmation(current => current === preFinalConfirmation ? null : current)}
                 onReadAgain={() => { setPreFinalConfirmation(null); openMainSection('leitor'); setStatus('Selecione o print original da carta para preencher os dados automaticamente.'); }}
               />
-              </Suspense>
             ) : loading && !result && !draftResult ? (
               <div className="creation-processing-card luxury-panel" role="status" aria-live="polite">
                 <div className="creation-processing-visual"><span><ScanText size={30} /></span><i /><i /><i /></div>
