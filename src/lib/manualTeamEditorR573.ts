@@ -103,8 +103,12 @@ export function buildManualFormationLineupR573(
   const append=(fit:FormationSlotFit)=>{placed.push(fit);return fit};
   return blueprint.slots.map((sourceSlot,index)=>{
     const role=layout.positionOverrides[sourceSlot.id];
+    const placement=layout.positions[sourceSlot.id];
+    // Field coordinates remain presentation metadata; tactical role is changed only by
+    // validated positionOverrides. Both are propagated to the complete team diagnosis.
+    const adjustedSlot=placement?{...sourceSlot,x:placement.x,y:placement.y}:sourceSlot;
     const slot=role && (role===sourceSlot.position||sourceSlot.alternatives.includes(role))
-      ?{...sourceSlot,position:role,label:role===sourceSlot.position?sourceSlot.label:sourceSlot.label+' • '+role}:sourceSlot;
+      ?{...adjustedSlot,position:role,label:role===sourceSlot.position?sourceSlot.label:sourceSlot.label+' • '+role}:adjustedSlot;
     const hasPin=owns(manualAssignments,slot.id);
     const pin=manualAssignments[slot.id];
     if(hasPin && pin===null)return append(emptyFit(slot));
